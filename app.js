@@ -49,8 +49,8 @@ function fillSelect(id){
   const el=$(id);el.replaceChildren();
   const empty=document.createElement("option");empty.value="";empty.textContent="— Не обрано —";el.append(empty);
   headers.forEach((h,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=h;el.append(o);});
-  const patterns=id==="lat"?[/^(lat|latitude|широта)$/i,/широт|latitude/i]:
-                 id==="lon"?[/^(lon|lng|longitude|довгота)$/i,/довгот|longitude|long/i]:
+  const patterns=id==="lat"?[/^(lat|latitude|широта|y)$/i,/широт|latitude/i]:
+                 id==="lon"?[/^(lon|lng|longitude|довгота|x)$/i,/довгот|longitude/i]:
                  [/^(name|назва|title|об'єкт)$/i,/назв|name|title/i];
   let match=-1;for(const re of patterns){match=headers.findIndex(h=>re.test(h));if(match>=0)break;}
   if(match>=0)el.value=String(match);
@@ -66,19 +66,7 @@ function validation(){
   }
   return {valid,invalid,message:""};
 }
-function render(){
-  const result=validation();const {valid,invalid,message}=result;
-  $("stats").replaceChildren();
-  for(const [title,count] of [["Усього",rows.length],["Коректні",valid.length],["Пропущені",invalid.length]]){
-    const d=document.createElement("div");d.className="stat";
-    const strong=document.createElement("strong");strong.textContent=count.toLocaleString("uk-UA");
-    const small=document.createElement("span");small.textContent=title;d.append(strong,small);$("stats").append(d);
-  }
-  $("errors").textContent=message||(invalid.length?"Некоректні координати у рядках: "+invalid.slice(0,25).join(", ")+(invalid.length>25?" …":""):"Усі координати проходять перевірку діапазонів.");
-  $("errors").className="info "+(message||invalid.length?"err":"ok");
-  for(const id of ["kml","kmz"])$(id).disabled=!valid.length||!!message;
-  return result;
-}
+
 function kmlDocument(){
   const {valid,message}=validation();if(message||!valid.length)throw new Error(message||"Немає коректних точок.");
   const nameColumn=$("name").value;const parts=['<?xml version="1.0" encoding="UTF-8"?>','<kml xmlns="http://www.opengis.net/kml/2.2"><Document>','<name>'+esc($("outname").value||"geodata")+'</name>'];
@@ -104,11 +92,7 @@ function zipSingle(filename,content){
   const e=o+centralSize;w32(e,0x06054b50);w16(e+8,1);w16(e+10,1);w32(e+12,centralSize);w32(e+16,o);
   return new Blob([output],{type:"application/vnd.google-earth.kmz"});
 }
-function renderTable(){
-  const head=document.createElement("tr");headers.forEach(h=>{const th=document.createElement("th");th.textContent=h;head.append(th);});
-  $("thead").replaceChildren(head);$("tbody").replaceChildren();
-  for(const row of rows.slice(0,10)){const tr=document.createElement("tr");row.forEach(val=>{const td=document.createElement("td");td.textContent=val;td.title=val;tr.append(td);});$("tbody").append(tr);}
-}
+
 async function load(file){
   if(!file)return;
   if(file.size>20*1024*1024){alert("Максимальний розмір CSV — 20 МБ.");return;}
@@ -120,15 +104,17 @@ async function load(file){
     headers=all[0].map((h,i)=>clean(h)||"Колонка "+(i+1));rows=all.slice(1);filename=file.name.replace(/\.[^.]+$/,"");
     $("outname").value=filename.replace(/[^\w\u0400-\u04FF-]/g,"_").slice(0,80)||"geodata";
     $("fileinfo").textContent=file.name+" · "+rows.length.toLocaleString("uk-UA")+" рядків · "+headers.length+" колонок · роздільник "+(delimiter==="\t"?"TAB":delimiter);
-    selects.forEach(fillSelect);renderTable();
-    for(const id of ["mapping","preview","export"])$(id).classList.remove("hidden");
-    render();$("mapping").scrollIntoView({behavior:"smooth",block:"start"});
-  }catch(err){alert("Помилка CSV: "+err.message);}
+    selects.forEach(fillSelect);
+    const result=validation();
+    if(result.message)throw new Error("Потрібні окремі колонки широти та довготи WGS84. MGRS або інші формати цим режимом не перетворюються.");
+    if(result.invalid.length)throw new Error("Некоректні координати в "+result.invalid.length+" рядках (перші: "+result.invalid.slice(0,8).join(", ")+"). Експорт скасовано, щоб не втратити записи.");
+    const kml=kmlDocument();
+    const out=($("outname").value||"geodata")+".kmz";
+    download(zipSingle("doc.kml",kml),out,"application/vnd.google-earth.kmz");
+    $("status").textContent="Готово: "+result.valid.length.toLocaleString("uk-UA")+" точок · "+out+" автоматично завантажено.";
+  }catch(err){$("status").textContent="Не вдалося конвертувати: "+err.message;}
 }
 $("file").addEventListener("change",e=>load(e.target.files[0]));
-for(const id of selects)$(id).addEventListener("change",render);
-$("kml").addEventListener("click",()=>{try{download("\uFEFF"+kmlDocument(),($("outname").value||"geodata")+".kml","application/vnd.google-earth.kml+xml");}catch(e){alert(e.message);}});
-$("kmz").addEventListener("click",()=>{try{download(zipSingle("doc.kml",kmlDocument()),($("outname").value||"geodata")+".kmz","application/vnd.google-earth.kmz");}catch(e){alert(e.message);}});
 $("demo").addEventListener("click",()=>download("\uFEFFНазва;Широта;Довгота;Категорія;Опис\nМузей;48.2924;25.9343;Культура;Демонстраційний об’єкт\nПарк;48.2870;25.9518;Відпочинок;Навчальний приклад\n","geodata-demo.csv","text/csv;charset=utf-8"));
 const drop=$("drop");for(const evt of ["dragenter","dragover"]){drop.addEventListener(evt,e=>{e.preventDefault();drop.classList.add("drag");});}
 for(const evt of ["dragleave","drop"]){drop.addEventListener(evt,e=>{e.preventDefault();drop.classList.remove("drag");});}
