@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111827"><title>GEO CONVERTER — CSV → KML / KMZ</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#e8eef9;background:#0b1020}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 75% 3%,#183459 0,transparent 37%),#0b1020}
+main{max-width:1150px;margin:0 auto;padding:32px 22px 70px}header{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:34px}
+.brand{display:flex;align-items:center;gap:13px;font-weight:800;letter-spacing:.04em}.logo{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:linear-gradient(140deg,#3b82f6,#10b981);font-size:24px}
+.kicker{font-size:12px;color:#90a6c4;letter-spacing:.1em;text-transform:uppercase}
+h1{font-size:clamp(28px,4vw,49px);letter-spacing:-.04em;margin:0 0 8px}h2{font-size:19px;margin:0 0 17px}p{color:#9cabc6;line-height:1.6}.hero{margin-bottom:30px}.hero p{max-width:660px}
+.card{background:rgba(18,27,48,.89);border:1px solid #293954;border-radius:18px;padding:25px;margin-bottom:19px;box-shadow:0 15px 45px #0001}
+.steps{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.step{font-size:13px;color:#b9c6db;border:1px solid #293954;padding:9px 13px;border-radius:100px}.step.active{border-color:#4b97ef;background:#163b69;color:#d5ecff}
+.drop{border:2px dashed #436182;border-radius:15px;text-align:center;padding:35px 16px;transition:.15s;background:#14223a}.drop.drag{border-color:#60e0b6;background:#153d42}
+.drop strong{display:block;font-size:20px;margin:12px 0 4px}.drop p{font-size:14px;margin:0 0 16px}
+button,.filebutton{cursor:pointer;border:0;border-radius:10px;background:#338be9;color:white;padding:12px 18px;font-size:14px;font-weight:700;display:inline-block}
+button:hover,.filebutton:hover{filter:brightness(1.13)}button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#233553;color:#d7e4f8}
+input[type=file]{display:none}select,input[type=text]{background:#0d172a;border:1px solid #39506c;color:#eef4ff;border-radius:9px;padding:11px;width:100%;min-width:0;font-size:14px}
+label{display:block;color:#afbed5;font-size:13px;margin-bottom:8px}.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:17px}
+.stats{display:flex;flex-wrap:wrap;gap:14px;margin:15px 0}.stat{border:1px solid #31425f;border-radius:12px;padding:12px 17px;min-width:135px}.stat strong{display:block;font-size:24px}.stat span{font-size:12px;color:#a7b9d5}
+.tablewrap{max-height:350px;overflow:auto;border:1px solid #334563;border-radius:12px}
+table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}th,td{text-align:left;padding:10px 13px;border-bottom:1px solid #273a56;max-width:230px;overflow:hidden;text-overflow:ellipsis}th{position:sticky;top:0;background:#1b2b45;color:#d7e9ff}
+.actionrow{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:19px}.message{border:1px solid #5f6d48;background:#323823;color:#f3e7bb;border-radius:10px;padding:12px 15px;font-size:13px;margin-top:16px}
+.info{font-size:12px;color:#8ca4c4}.hidden{display:none!important}.ok{color:#83e4ae}.err{color:#ffb3b3}
+footer{color:#8799b7;font-size:12px;margin-top:32px}code{color:#c5e3ff}
+@media(max-width:600px){main{padding:20px 13px}header{margin-bottom:25px}.card{padding:17px}}
+</style></head><body><main>
+<header><div class="brand"><div class="logo">◈</div><div>GEO CONVERTER<div class="kicker">CSV · KML · KMZ</div></div></div><span class="kicker">Локальна обробка · v1.0</span></header>
+<section class="hero"><h1>Перетворюй геодані.<br>Без зайвих кроків.</h1><p>Завантаж CSV з нейтральними географічними об’єктами, зістав колонки координат і збережи стандартний KML або KMZ. Дані обробляються виключно у твоєму браузері.</p></section>
+<div class="steps"><span class="step active">01 · CSV</span><span class="step">02 · Колонки</span><span class="step">03 · Перевірка</span><span class="step">04 · Експорт</span></div>
+<section class="card"><h2>01 / Завантаження</h2><div id="drop" class="drop"><div style="font-size:35px">⇧</div><strong>Перетягни CSV сюди</strong><p>Підтримка UTF-8, UTF-8 BOM, роздільників «;», «,» і табуляції · до 20 МБ</p><label class="filebutton" for="file">Обрати CSV</label><input id="file" type="file" accept=".csv,text/csv,text/plain"></div><div id="fileinfo" class="info" style="margin-top:13px">Файл ще не обрано</div></section>
+<section id="mapping" class="card hidden"><h2>02 / Налаштування колонок</h2><p>Поля з координатами потрібні для точок. Усі інші поля автоматично потрапляють до <code>ExtendedData</code>.</p><div class="formgrid">
+<div><label for="lat">Широта (latitude)</label><select id="lat"></select></div><div><label for="lon">Довгота (longitude)</label><select id="lon"></select></div><div><label for="name">Назва об’єкта (необов’язково)</label><select id="name"></select></div><div><label for="outname">Назва файлу</label><input id="outname" type="text" value="geodata"></div></div>
+<div class="message">Координати повинні бути в десяткових градусах WGS84 (EPSG:4326). Десятковий роздільник — крапка. KMZ не гарантує однакового відображення стилів у різних програмах.</div></section>
+<section id="preview" class="card hidden"><h2>03 / Перевірка та перегляд</h2><div id="stats" class="stats"></div><div id="errors" class="info"></div><p class="info">Нижче — лише перші 10 рядків. Повна таблиця залишається у пам’яті браузера.</p><div class="tablewrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div></section>
+<section id="export" class="card hidden"><h2>04 / Експорт</h2><p>Для кожного коректного запису формується точковий об’єкт. Текстові поля, часові значення й числові атрибути залишаються у властивостях KML без примусового перетворення.</p><div class="actionrow"><button id="kml" disabled>↓ Завантажити KML</button><button id="kmz" disabled>↓ Завантажити KMZ</button><button id="demo" class="secondary">Завантажити зразок CSV</button></div><p class="info">KMZ — стандартний ZIP-контейнер з <code>doc.kml</code>. Підтримано точки, без побудови маршрутів чи спеціалізованих оперативних шарів.</p></section>
+<footer>GEO CONVERTER · Відкритий код · Жодних серверних завантажень · Не використовуйте для секретних або оперативних військових даних.</footer>
+</main><script src="./app.js"></script></body></html>
