@@ -21,14 +21,28 @@ function parseCSV(input,delimiter){
   return data;
 }
 function detectDelimiter(text){
-  const sample=text.slice(0,12000);const candidates=[",",";","\t"];
-  let best=",",score=-Infinity;
-  for(const d of candidates){try{const parsed=parseCSV(sample,d).slice(0,12);if(parsed.length===0)continue;
-    const lengths=parsed.map(r=>r.length),width=lengths[0];
-    const consistency=lengths.filter(n=>n===width).length/lengths.length;
-    const s=(width>1?width*10:0)+consistency*10-(Math.max(...lengths)-Math.min(...lengths))*2;
-    if(s>score){best=d;score=s;}
-  }catch{}}
+  // Use the entire first logical CSV record. Cutting input at arbitrary
+  // character positions can end inside a quoted value.
+  let quoted=false, end=text.length;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(c==='"'){
+      if(quoted&&text[i+1]==='"'){i++;continue;}
+      quoted=!quoted;
+    }else if(!quoted&&(c==="\n"||c==="\r")){
+      end=i;break;
+    }
+  }
+  const header=text.slice(0,end);
+  const candidates=[",",";","\t"];
+  let best=",",maxFields=0;
+  for(const delimiter of candidates){
+    try{
+      const parsed=parseCSV(header,delimiter);
+      const count=parsed[0]?.length||0;
+      if(count>maxFields){maxFields=count;best=delimiter;}
+    }catch{}
+  }
   return best;
 }
 function fillSelect(id){
@@ -100,7 +114,7 @@ async function load(file){
   if(file.size>20*1024*1024){alert("Максимальний розмір CSV — 20 МБ.");return;}
   try{
     const text=(await file.text()).replace(/^\uFEFF/,"");const delimiter=detectDelimiter(text),all=parseCSV(text,delimiter);
-    if(all.length<2||all[0].length<2)throw new Error("Не знайдено таблицю з заголовками та даними.");
+    if(all.length<2||all[0].length<2)throw new Error("Не знайдено таблицю з заголовками та даними. Виявлено "+all.length+" рядків і "+(all[0]?.length||0)+" колонок. Перевір формат CSV і роздільник.");
     const width=all[0].length;const mismatches=all.slice(1).reduce((a,r)=>a+(r.length!==width),0);
     if(mismatches)throw new Error("У "+mismatches+" рядках інша кількість колонок. Перевір лапки та роздільники.");
     headers=all[0].map((h,i)=>clean(h)||"Колонка "+(i+1));rows=all.slice(1);filename=file.name.replace(/\.[^.]+$/,"");
