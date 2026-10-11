@@ -1,34 +1,92 @@
 <!doctype html>
-<html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#111827"><title>GEO CONVERTER — CSV → KML / KMZ</title>
+<html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEO CONVERTER — CSV → KMZ</title>
 <style>
-:root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#e8eef9;background:#0b1020}*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(circle at 75% 3%,#183459 0,transparent 37%),#0b1020}
-main{max-width:1150px;margin:0 auto;padding:32px 22px 70px}header{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:34px}
-.brand{display:flex;align-items:center;gap:13px;font-weight:800;letter-spacing:.04em}.logo{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:linear-gradient(140deg,#3b82f6,#10b981);font-size:24px}
-.kicker{font-size:12px;color:#90a6c4;letter-spacing:.1em;text-transform:uppercase}
-h1{font-size:clamp(28px,4vw,49px);letter-spacing:-.04em;margin:0 0 8px}h2{font-size:19px;margin:0 0 17px}p{color:#9cabc6;line-height:1.6}.hero{margin-bottom:30px}.hero p{max-width:660px}
-.card{background:rgba(18,27,48,.89);border:1px solid #293954;border-radius:18px;padding:25px;margin-bottom:19px;box-shadow:0 15px 45px #0001}
-.steps{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.step{font-size:13px;color:#b9c6db;border:1px solid #293954;padding:9px 13px;border-radius:100px}.step.active{border-color:#4b97ef;background:#163b69;color:#d5ecff}
-.drop{border:2px dashed #436182;border-radius:15px;text-align:center;padding:35px 16px;transition:.15s;background:#14223a}.drop.drag{border-color:#60e0b6;background:#153d42}
-.drop strong{display:block;font-size:20px;margin:12px 0 4px}.drop p{font-size:14px;margin:0 0 16px}
-button,.filebutton{cursor:pointer;border:0;border-radius:10px;background:#338be9;color:white;padding:12px 18px;font-size:14px;font-weight:700;display:inline-block}
-button:hover,.filebutton:hover{filter:brightness(1.13)}button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#233553;color:#d7e4f8}
-input[type=file]{display:none}select,input[type=text]{background:#0d172a;border:1px solid #39506c;color:#eef4ff;border-radius:9px;padding:11px;width:100%;min-width:0;font-size:14px}
-label{display:block;color:#afbed5;font-size:13px;margin-bottom:8px}.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:17px}
-.stats{display:flex;flex-wrap:wrap;gap:14px;margin:15px 0}.stat{border:1px solid #31425f;border-radius:12px;padding:12px 17px;min-width:135px}.stat strong{display:block;font-size:24px}.stat span{font-size:12px;color:#a7b9d5}
-.tablewrap{max-height:350px;overflow:auto;border:1px solid #334563;border-radius:12px}
-table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}th,td{text-align:left;padding:10px 13px;border-bottom:1px solid #273a56;max-width:230px;overflow:hidden;text-overflow:ellipsis}th{position:sticky;top:0;background:#1b2b45;color:#d7e9ff}
-.actionrow{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:19px}.message{border:1px solid #5f6d48;background:#323823;color:#f3e7bb;border-radius:10px;padding:12px 15px;font-size:13px;margin-top:16px}
-.info{font-size:12px;color:#8ca4c4}.hidden{display:none!important}.ok{color:#83e4ae}.err{color:#ffb3b3}
-footer{color:#8799b7;font-size:12px;margin-top:32px}code{color:#c5e3ff}
-@media(max-width:600px){main{padding:20px 13px}header{margin-bottom:25px}.card{padding:17px}}
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:#080e1b;color:#eaf2ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#15315a 0,transparent 44%),#080e1b;min-height:100vh}
+main{max-width:920px;margin:auto;padding:52px 22px 70px}.eyebrow{letter-spacing:.2em;font-size:12px;color:#80caff;font-weight:750}
+h1{font-size:clamp(35px,7vw,68px);line-height:1.07;letter-spacing:-.05em;margin:15px 0 18px}h2{font-size:19px;margin:0 0 18px}
+p{color:#adbed6;line-height:1.65}.tag{border:1px solid #345377;padding:7px 13px;border-radius:30px;color:#9cd6ff;font-size:12px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0 34px}.panel{border:1px solid #254064;background:#111e34df;border-radius:21px;padding:26px;margin-top:18px;box-shadow:0 22px 60px #0003}
+.drop{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;min-height:218px;border:2px dashed #43658d;border-radius:15px;cursor:pointer;transition:.15s;background:#0c1729}
+.drop:hover,.drop.drag{border-color:#53c8ff;background:#152a46}.symbol{font-size:38px;color:#77d8ff}.muted{font-size:13px;color:#92a9c8}
+button{background:#4cb8f7;border:0;color:#061423;font-size:14px;font-weight:750;padding:12px 19px;border-radius:11px;cursor:pointer}button:hover{background:#9de2ff}
+#file{display:none}#status{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;color:#d4e5f7}.error{color:#ffb4b4!important}.success{color:#a8f5bd!important}
+footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 </style></head><body><main>
-<header><div class="brand"><div class="logo">◈</div><div>GEO CONVERTER<div class="kicker">CSV → KMZ</div></div></div><span class="kicker">Локальна обробка · v1.1</span></header>
-<section class="hero"><h1>Перетворюй геодані.<br>Без зайвих кроків.</h1><p>Завантаж CSV із нейтральними точками WGS84 — KMZ завантажиться автоматично. Дані обробляються виключно у твоєму браузері.</p></section>
-<section class="card"><h2>Завантаження CSV</h2><div id="drop" class="drop"><div style="font-size:35px">⇧</div><strong>Перетягни CSV сюди</strong><p>Підтримка UTF-8, UTF-8 BOM, роздільників «;», «,» і табуляції · до 20 МБ</p><label class="filebutton" for="file">Обрати CSV</label><input id="file" type="file" accept=".csv,text/csv,text/plain"></div><div id="fileinfo" class="info" style="margin-top:13px">Файл ще не обрано</div></section>
-<section class="card"><h2>Результат</h2><p id="status" role="status" aria-live="polite">Очікую на файл із колонками широти й довготи у WGS84 (десяткові градуси).</p><p class="info">Усі поля CSV зберігаються в KMZ як атрибути. Якщо координати відсутні або некоректні, експорт не відбувається.</p><button id="demo" class="secondary">Завантажити тестовий CSV</button></section>
-<!-- Hidden legacy selectors retained for document generator, populated automatically. -->
-<div class="hidden"><select id="lat"></select><select id="lon"></select><select id="name"></select><input id="outname" type="text"></div>
-<footer>GEO CONVERTER · Відкритий код · Жодних серверних завантажень · Не використовуйте для секретних або оперативних військових даних.</footer>
-</main><script src="./app.js"></script></body></html>
+<div class="eyebrow">◈ GEO CONVERTER</div>
+<h1>CSV → KMZ.<br>Без зайвих кроків.</h1>
+<p>Завантаж CSV з координатами <strong>MGRS</strong> або <strong>WGS84</strong>. Отримай KMZ з координатами WGS84 (довгота, широта), готовий для перегляду в GIS. Конвертація відбувається у браузері, без надсилання CSV на сервер.</p>
+<div class="tags"><span class="tag">MGRS → WGS84</span><span class="tag">WGS84 → KMZ</span><span class="tag">Автоматичне завантаження</span><span class="tag">CSV до 20 МБ</span></div>
+<section class="panel"><h2>Завантаження CSV</h2>
+<div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">UTF-8 · роздільники ; , або табуляція</span><button id="choose" type="button">Обрати CSV</button></div>
+<input id="file" type="file" accept=".csv,text/csv"></section>
+<section class="panel"><h2>Результат</h2><p id="status" aria-live="polite">Очікую CSV. Підтримуються колонка MGRS або колонки широти й довготи WGS84. Усі початкові поля зберігаються в атрибутах KMZ.</p></section>
+<footer>GEO CONVERTER · v1.2 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
+<script type="module">
+import * as mgrs from 'https://esm.sh/mgrs@2.2.0';
+import JSZip from 'https://esm.sh/jszip@3.10.1';
+const fileInput=document.getElementById('file'),drop=document.getElementById('drop'),status=document.getElementById('status');
+const setStatus=(message,kind='')=>{status.textContent=message;status.className=kind};
+document.getElementById('choose').addEventListener('click',e=>{e.stopPropagation();fileInput.click()});
+drop.addEventListener('click',()=>fileInput.click());
+drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click()}});
+for(const ev of ['dragenter','dragover'])drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')});
+for(const ev of ['dragleave','drop'])drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')});
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)processFile(f)});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])processFile(fileInput.files[0]);fileInput.value=''});
+function parseCSV(text){
+ text=text.replace(/^\uFEFF/,'');const first=text.split(/\r?\n/).find(x=>x.trim())||'';
+ const counts=[';',',','\t'].map(sep=>{let quote=false,n=0;for(const c of first){if(c==='"')quote=!quote;else if(!quote&&c===sep)n++}return n});
+ const sep=[';',',','\t'][counts.indexOf(Math.max(...counts))];
+ let rows=[],row=[],field='',quoted=false;
+ for(let i=0;i<text.length;i++){const c=text[i];
+ if(c==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++}else quoted=!quoted}
+ else if(c===sep&&!quoted){row.push(field);field=''}
+ else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(x=>x.trim()))rows.push(row);row=[];field=''}
+ else field+=c}
+ if(quoted)throw Error('Незакриті лапки у CSV');
+ row.push(field);if(row.some(x=>x.trim()))rows.push(row);
+ if(rows.length<2)throw Error('CSV має містити заголовки та хоча б один рядок');
+ const headers=rows.shift().map((x,i)=>x.trim()||'column_'+(i+1));
+ return {headers,records:rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,(r[i]||'').trim()])))};
+}
+const normalize=s=>s.toLowerCase().replace(/[\s_\-().]/g,'');
+function column(headers,variants){return headers.find(h=>variants.includes(normalize(h)))}
+function num(s){let v=Number(String(s).trim().replace(',','.'));return s!==''&&Number.isFinite(v)?v:NaN}
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
+async function processFile(file){
+ try{
+ if(file.size>20*1024*1024)throw Error('Файл перевищує обмеження 20 МБ');
+ if(!/\.csv$/i.test(file.name))throw Error('Оберіть файл .csv');
+ setStatus('Обробка CSV…');
+ const {headers,records}=parseCSV(await file.text());
+ const mc=column(headers,['mgrs','mgrscoordinate','mgrscoordinates','координатимгрс','мгрс','gridreference','grid']);
+ const latc=column(headers,['lat','latitude','широта','y','wgs84lat','wgs84latitude']);
+ const lonc=column(headers,['lon','lng','long','longitude','довгота','x','wgs84lon','wgs84longitude']);
+ if(!mc&&!(latc&&lonc))throw Error('Не знайдено колонку MGRS або пару колонок latitude/longitude (широта/довгота).');
+ const namec=column(headers,['name','title','назва','найменування','object','обєкт','id']);
+ let placemarks=[],errors=[];
+ records.forEach((record,i)=>{
+ try{
+ let lon,lat;
+ if(mc&&record[mc]){let m=record[mc].toUpperCase().replace(/\s+/g,'');if(!/^\d{1,2}[C-HJ-NP-X][A-HJ-NP-Z]{2}(?:\d{2}){0,5}$/.test(m))throw Error('некоректний формат MGRS');
+ [lon,lat]=mgrs.toPoint(m)}
+ else if(latc&&lonc){lat=num(record[latc]);lon=num(record[lonc])}
+ else throw Error('немає координат');
+ if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat >90||lon < -180||lon>180)throw Error('координати поза межами WGS84');
+ const name=record[namec]||'Точка '+(i+1);
+ const attrs=Object.entries(record).map(([k,v])=>'<Data name="'+esc(k)+'"><value>'+esc(v)+'</value></Data>').join('');
+ placemarks.push('<Placemark><name>'+esc(name)+'</name><ExtendedData>'+attrs+'<Data name="WGS84_lat"><value>'+lat.toFixed(8)+'</value></Data><Data name="WGS84_lon"><value>'+lon.toFixed(8)+'</value></Data></ExtendedData><Point><coordinates>'+lon.toFixed(8)+','+lat.toFixed(8)+',0</coordinates></Point></Placemark>');
+ }catch(e){errors.push('Рядок '+(i+2)+': '+e.message)}
+ });
+ if(errors.length)throw Error('Конвертацію зупинено: '+errors.length+' помилкових рядків.\n'+errors.slice(0,12).join('\n')+(errors.length>12?'\n…':''));
+ if(!placemarks.length)throw Error('Немає точок для конвертації');
+ const xml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+esc(file.name)+'</name>'+placemarks.join('')+'</Document></kml>';
+ const zip=new JSZip();zip.file('doc.kml',xml);
+ const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file.name.replace(/\.csv$/i,'')+'.kmz';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ setStatus('Готово! '+placemarks.length+' точок конвертовано у WGS84. Файл '+a.download+' завантажено автоматично.','success');
+ }catch(e){setStatus('Помилка: '+e.message,'error');console.error(e)}
+}
+</script></body></html>
