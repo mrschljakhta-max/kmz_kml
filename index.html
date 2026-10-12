@@ -13,12 +13,16 @@ p{color:#adbed6;line-height:1.65}
 button{background:#4cb8f7;border:0;color:#061423;font-size:14px;font-weight:750;padding:12px 19px;border-radius:11px;cursor:pointer}button:hover{background:#9de2ff}
 #file{display:none}#status{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;color:#d4e5f7;font-size:14px;max-width:70%}.error{color:#ffb4b4!important}.success{color:#a8f5bd!important}
 footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-top:18px}
+#drop #status{max-width:100%;text-align:center;line-height:1.5;margin:5px 12px 0;font-size:14px;font-weight:650}
+#drop #status:empty{display:none}
+#drop.processing{border-color:#66baff}
+#drop.completed{border-color:#4fc88e}
+#drop.failed{border-color:#f19c9c}
 #report{background:transparent;color:#aac6e7;border:1px solid #365474;padding:9px 13px;font-size:12px}#report:disabled{opacity:.4;cursor:not-allowed}
 </style></head><body><main>
 <h1>CSV → KMZ.</h1>
-<section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><input id="file" type="file" accept=".csv,text/csv"></section>
+<section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button><p id="status" aria-live="polite" role="status"></p></div><input id="file" type="file" accept=".csv,text/csv"></section>
 <div class="row">
-  <p id="status" aria-live="polite">Очікування CSV</p>
   <button id="report" type="button" disabled title="Завантажити короткий TXT-звіт">▤ TXT-звіт</button>
 </div>
 </main>
@@ -30,7 +34,14 @@ const fileInput=document.getElementById('file'),drop=document.getElementById('dr
 let reportText='';let reportFile='report.txt';
 const reportBtn=document.getElementById('report');
 function reportLine(message){reportText+='\n'+message}
-const setStatus=(message,kind='')=>{status.textContent=message;status.className=kind};
+const setStatus=(message,kind='')=>{
+  status.textContent=message;
+  status.className=kind;
+  drop.classList.remove('processing','completed','failed');
+  if(kind==='success')drop.classList.add('completed');
+  else if(kind==='error')drop.classList.add('failed');
+  else if(message)drop.classList.add('processing');
+};
 reportBtn.addEventListener('click',()=>{
   if(!reportText)return;
   const blob=new Blob(['\uFEFF'+reportText],{type:'text/plain;charset=utf-8'});
