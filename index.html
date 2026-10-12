@@ -18,10 +18,22 @@ footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-item
 #drop.processing{border-color:#66baff}
 #drop.completed{border-color:#4fc88e}
 #drop.failed{border-color:#f19c9c}
+/* Animated progress adapted from the supplied example */
+.drop.is-busy{cursor:default}
+.drop.is-busy .drop-default{display:none}
+.drop-progress{display:none;width:min(100%,540px);padding:18px 14px;pointer-events:none}
+.drop.is-busy .drop-progress{display:block}
+.progress-top{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:14px}
+.progress-status{color:#c1c7dc;font-size:15px}
+.progress-percent{font-size:clamp(36px,8vw,48px);font-weight:850;line-height:1;letter-spacing:-.055em;font-variant-numeric:tabular-nums}
+.progress-track{height:17px;border-radius:99px;background:#30354c;overflow:hidden}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#8170ff,#43b9dc,#35dfc4);border-radius:inherit;transition:width .12s linear}
+.progress-labels{display:flex;justify-content:space-between;color:#8790ae;font-size:12px;margin-top:15px;gap:8px}
+@media(prefers-reduced-motion:reduce){.progress-fill{transition:none}}
 #report{background:transparent;color:#aac6e7;border:1px solid #365474;padding:9px 13px;font-size:12px}#report:disabled{opacity:.4;cursor:not-allowed}
 </style></head><body><main>
 <h1>CSV → KMZ.</h1>
-<section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button><p id="status" aria-live="polite" role="status"></p></div><input id="file" type="file" accept=".csv,text/csv"></section>
+<section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="drop-default" style="display:flex;align-items:center;flex-direction:column;gap:10px"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><div class="drop-progress" aria-label="Прогрес конвертації"><div class="progress-top"><span class="progress-status" id="progressStatus">Початок…</span><span class="progress-percent" id="progressPercent">0%</span></div><div class="progress-track" id="progressTrack" role="progressbar" aria-label="Прогрес" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progressFill"></div></div><div class="progress-labels"><span>Початок</span><span>Обробка</span><span>Завершення</span></div></div><p id="status" aria-live="polite" role="status"></p></div><input id="file" type="file" accept=".csv,text/csv"></section>
 <div class="row">
   <button id="report" type="button" disabled title="Завантажити короткий TXT-звіт">▤ TXT-звіт</button>
 </div>
@@ -31,7 +43,10 @@ import JSZip from 'https://esm.sh/jszip@3.10.1';
 import * as mgrs from 'https://esm.sh/mgrs@2.1.0';
 
 const fileInput=document.getElementById('file'),drop=document.getElementById('drop'),status=document.getElementById('status');
-let reportText='';let reportFile='report.txt';
+let reportText='';let reportFile='report.txt';let busy=false;
+const progressFill=document.getElementById('progressFill'),progressPercent=document.getElementById('progressPercent'),progressStatus=document.getElementById('progressStatus'),progressTrack=document.getElementById('progressTrack');
+function setProgress(p,label){p=Math.max(0,Math.min(100,Math.round(p)));progressFill.style.width=p+'%';progressPercent.textContent=p+'%';progressTrack.setAttribute('aria-valuenow',String(p));progressStatus.textContent=label;}
+function frame(){return new Promise(resolve=>requestAnimationFrame(()=>resolve()))}
 const reportBtn=document.getElementById('report');
 function reportLine(message){reportText+='\n'+message}
 const setStatus=(message,kind='')=>{
@@ -50,12 +65,12 @@ reportBtn.addEventListener('click',()=>{
   setTimeout(()=>URL.revokeObjectURL(url),10000);
 });
 document.getElementById('choose').addEventListener('click',e=>{e.stopPropagation();fileInput.click()});
-drop.addEventListener('click',()=>fileInput.click());
-drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click()}});
+drop.addEventListener('click',()=>{if(!busy)fileInput.click()});
+drop.addEventListener('keydown',e=>{if(!busy&&(e.key==='Enter'||e.key===' ')){e.preventDefault();fileInput.click()}});
 for(const ev of ['dragenter','dragover'])drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')});
 for(const ev of ['dragleave','drop'])drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')});
-drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)processFile(f)});
-fileInput.addEventListener('change',()=>{if(fileInput.files[0])processFile(fileInput.files[0]);fileInput.value=''});
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f&&!busy)processFile(f)});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0]&&!busy)processFile(fileInput.files[0]);fileInput.value=''});
 
 function parseCSV(text){
   text=text.replace(/^\uFEFF/,'');
@@ -104,14 +119,25 @@ function parseMgrs(str){
 }
 
 async function processFile(file){
+  if(busy)return;
+  busy=true;
+  drop.classList.add('is-busy');
+  setProgress(0,'Початок…');
+  await frame();
   reportText='GEO CONVERTER — CSV REPORT\nФайл: '+file.name+'\nРозмір: '+file.size+' байтів';
   reportFile=file.name.replace(/\.csv$/i,'')+'_report.txt';
   reportBtn.disabled=true;
   try{
   if(file.size>20*1024*1024)throw Error('Файл перевищує обмеження 20 МБ');
   if(!/\.csv$/i.test(file.name))throw Error('Оберіть файл .csv');
-  setStatus('Обробка CSV…');
-  const {headers,records,sep}=parseCSV(await file.text());
+  setStatus('');
+  setProgress(5,'Читання CSV…');
+  const content=await file.text();
+  setProgress(15,'Перевірка структури…');
+  await frame();
+  const {headers,records,sep}=parseCSV(content);
+  setProgress(25,'Обробка…');
+  await frame();
   reportLine('Записів: '+records.length);reportLine('Колонок: '+headers.length);reportLine('Імпорт: успішно');reportLine('Роздільник: '+(sep==='\t'?'табуляція':sep));
 
   const latc=column(headers,['lat','latitude','широта','wgs84lat','wgs84latitude','gpslatitude']);
@@ -134,7 +160,9 @@ async function processFile(file){
   const namec=column(headers,['name','title','назва','найменування','object','обєкт','id','номерцілі','номер']);
   let placemarks=[],errors=[],exported=0;
 
-  records.forEach((record,i)=>{
+  for(let i=0;i<records.length;i++){
+    const record=records[i];
+    if(i%250===0){setProgress(25+55*i/records.length,'Обробка…');await frame();}
     try{
       const attrs=Object.entries(record).map(([k,v])=>'<Data name="'+esc(k)+'"><value>'+esc(v)+'</value></Data>').join('');
       const name=(namec&&record[namec])||'Об’єкт '+(i+1);
@@ -162,7 +190,9 @@ async function processFile(file){
         exported++;
       }
     }catch(e){errors.push('Рядок '+(i+2)+': '+e.message)}
-  });
+  }
+  setProgress(80,'Завершення…');
+  await frame();
 
   reportLine('Помилкових рядків: '+errors.length);
   if(errors.length)reportLine('Деталі помилок:\n'+errors.slice(0,50).join('\n')+(errors.length>50?'\n…':''));
@@ -174,14 +204,17 @@ async function processFile(file){
 
   const xml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+esc(file.name)+'</name>'+placemarks.join('')+'</Document></kml>';
   const zip=new JSZip();zip.file('doc.kml',xml);
-  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  setProgress(88,'Архівація KMZ…');
+  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},meta=>setProgress(88+Math.floor(meta.percent*0.11),'Архівація KMZ…'));
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file.name.replace(/\.csv$/i,'')+'.kmz';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   reportLine('Результат: '+a.download);reportLine('Статус: SUCCESS');
+  setProgress(100,'Готово! ✓');
   setStatus('✓ Готово — KMZ завантажено автоматично.','success');
   }catch(e){
     reportLine('Статус: ERROR');reportLine('Причина: '+e.message);
+    setProgress(0,'Помилка конвертації');
     setStatus('Не вдалося створити KMZ. Деталі — у TXT-звіті.','error');
     console.error(e);
-  }finally{reportBtn.disabled=false}
+  }finally{reportBtn.disabled=false;busy=false;drop.classList.remove('is-busy')}
 }
 </script></body></html>
