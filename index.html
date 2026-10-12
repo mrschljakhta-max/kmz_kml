@@ -16,13 +16,13 @@ footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-item
  #report{background:transparent;color:#aac6e7;border:1px solid #365474;padding:9px 13px;font-size:12px}#report:disabled{opacity:.4;cursor:not-allowed}#status{font-size:14px;max-width:70%;margin:0} .panel{padding:22px} </style></head><body><main>
 <div class="eyebrow">◈ GEO CONVERTER</div>
 <h1>CSV → KMZ.<br>Без зайвих кроків.</h1>
-<p>Завантаж CSV із широтою та довготою WGS84 — сайт автоматично створить KMZ. Обробка відбувається локально в браузері.</p>
+<p>Завантаж CSV із координатами WGS84 — сайт створить KMZ із точками та, за наявності bird_id і часу, маршрутами спостережень птахів. Обробка відбувається локально в браузері.</p>
 <section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><input id="file" type="file" accept=".csv,text/csv"></section>
 <div class="row" style="justify-content:space-between;margin-top:18px">
  <p id="status" aria-live="polite">Очікування CSV</p>
  <button id="report" type="button" disabled title="Завантажити короткий TXT-звіт">▤ TXT-звіт</button>
 </div>
-<footer>GEO CONVERTER · v2.0 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
+<footer>GEO CONVERTER · v2.1 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
 <script type="module">
 import JSZip from 'https://esm.sh/jszip@3.10.1';
 const fileInput=document.getElementById('file'),drop=document.getElementById('drop'),status=document.getElementById('status');
@@ -93,12 +93,20 @@ async function processFile(file){
  }
  reportLine('Координати: '+latc+' / '+lonc);
  const namec=column(headers,['name','title','назва','найменування','object','обєкт','id']);
- let placemarks=[],errors=[];
+ const birdc=column(headers,['birdid','ідптаха','ідентифікаторптаха','птахid']);
+ const timec=column(headers,['time','timestamp','datetime','observedat','час','часспостереження','дататaчас','date']);
+ let placemarks=[],errors=[],groups=new Map();
  records.forEach((record,i)=>{
  try{
  const lat=num(record[latc]),lon=num(record[lonc]);
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat >90||lon < -180||lon>180)throw Error('координати поза межами WGS84');
  const name=(namec&&record[namec])||'Точка '+(i+1);
+ if(birdc&&timec&&record[birdc]){
+   const stamp=Date.parse(record[timec]);
+   if(!Number.isFinite(stamp))throw Error('некоректний час спостереження');
+   if(!groups.has(record[birdc]))groups.set(record[birdc],[]);
+   groups.get(record[birdc]).push({lat,lon,stamp,index:i});
+ }
  const attrs=Object.entries(record).map(([k,v])=>'<Data name="'+esc(k)+'"><value>'+esc(v)+'</value></Data>').join('');
  placemarks.push('<Placemark><name>'+esc(name)+'</name><ExtendedData>'+attrs+'<Data name="WGS84_lat"><value>'+lat.toFixed(8)+'</value></Data><Data name="WGS84_lon"><value>'+lon.toFixed(8)+'</value></Data></ExtendedData><Point><coordinates>'+lon.toFixed(8)+','+lat.toFixed(8)+',0</coordinates></Point></Placemark>');
  }catch(e){errors.push('Рядок '+(i+2)+': '+e.message)}
@@ -106,6 +114,20 @@ async function processFile(file){
  reportLine('Помилкових рядків: '+errors.length);if(errors.length)reportLine('Деталі помилок:\n'+errors.slice(0,100).join('\n')+(errors.length>100?'\n…':''));
  if(errors.length)throw Error('Конвертацію зупинено: '+errors.length+' помилкових рядків.\n'+errors.slice(0,12).join('\n')+(errors.length>12?'\n…':''));
  if(!placemarks.length)throw Error('Немає точок для конвертації');
+ let lines=0, singles=0;
+ if(birdc&&timec){
+   for(const [bird,points] of groups){
+     points.sort((a,b)=>a.stamp-b.stamp||a.index-b.index);
+     if(points.length<2){singles++;continue}
+     const coords=points.map(p=>p.lon.toFixed(8)+','+p.lat.toFixed(8)+',0').join(' ');
+     placemarks.push('<Placemark><name>'+esc('Маршрут птаха '+bird)+'</name><ExtendedData><Data name="bird_id"><value>'+esc(bird)+'</value></Data><Data name="observations"><value>'+points.length+'</value></Data><Data name="start_time"><value>'+new Date(points[0].stamp).toISOString()+'</value></Data><Data name="end_time"><value>'+new Date(points[points.length-1].stamp).toISOString()+'</value></Data></ExtendedData><LineString><tessellate>1</tessellate><coordinates>'+coords+'</coordinates></LineString></Placemark>');
+     lines++;
+   }
+ }
+ reportLine('Точок: '+records.length);
+ reportLine('Маршрутів: '+lines);
+ reportLine('Птахів із єдиним спостереженням: '+singles);
+ if(!(birdc&&timec))reportLine('Маршрути: не створено (потрібні колонки bird_id та time).');
  const xml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+esc(file.name)+'</name>'+placemarks.join('')+'</Document></kml>';
  const zip=new JSZip();zip.file('doc.kml',xml);
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
