@@ -102,6 +102,9 @@ const rand=(a,b)=>a+(b-a)*random();
 let W=600,H=600,R=198,viewW=600,viewH=600,sceneX=0,sceneY=0,dpr=1,time=0,yaw=.4,state='idle',stateAge=0,hover=0,energy=0,aperture=0;
 let tx=0,ty=0,px=0,py=0,hoverLock=false,dragDepth=0,demoActive=false,demoElapsed=0,progress=0;
 let reduced=media.matches,last=0,raf=0,lastPercent=-1,phase=-1,filename='example.csv';
+// Cinematic progress: minimum 4.2 seconds, with the last 6% reserved for verified completion.
+const VISUAL_MIN_SECONDS=4.2,ABSORB_SECONDS=.55,FINISH_SECONDS=.38;
+let completionRequested=false,completionStartedAt=-1,completionStart=0,completionResolve=null;
 let morph=0,burst=0,quality=1,frameAverage=16;
 const V=(x,y,z)=>({x,y,z});
 function normalize(p){const n=Math.hypot(p.x,p.y,p.z)||1;return V(p.x/n,p.y/n,p.z/n)}
@@ -153,12 +156,19 @@ function setUIState(next,force=false){
  if(next==='success'){statusText.textContent='KMZ сформовано. Можна обрати інший CSV.';burst=1;}
  wake();
 }
-function reset(hovering=false){demoActive=false;demoElapsed=0;progress=0;phase=-1;lastPercent=-1;morph=0;burst=0;dragDepth=0;hoverLock=hovering;setUIState(hovering?'hover':'idle',true);wake()}
+function reset(hovering=false){
+ demoActive=false;demoElapsed=0;progress=0;phase=-1;lastPercent=-1;morph=0;burst=0;dragDepth=0;hoverLock=hovering;
+ completionRequested=false;completionStartedAt=-1;completionResolve=null;
+ setUIState(hovering?'hover':'idle',true);wake();
+}
 function startDemo(name='example.csv'){
- filename=name;hoverLock=false;demoElapsed=0;progress=0;morph=0;burst=0;lastPercent=-1;demoActive=true;dragDepth=0;setUIState('absorb',true);percent.textContent='0';progressA11y.setAttribute('aria-valuenow','0');wake();
+ filename=name;hoverLock=false;demoElapsed=0;progress=0;morph=0;burst=0;lastPercent=-1;demoActive=true;dragDepth=0;
+ completionRequested=false;completionStartedAt=-1;completionStart=0;completionResolve=null;
+ setUIState('absorb',true);percent.textContent='0';progressA11y.setAttribute('aria-valuenow','0');wake();
 }
 function showError(message){
  demoActive=false;demoElapsed=0;progress=0;
+ completionRequested=false;completionStartedAt=-1;
  setUIState('error',true);
  statusText.textContent=message;
  $('dropText').textContent='Помилка конвертації';
@@ -177,17 +187,18 @@ function acceptFiles(files){
 }
 window.geoVisual={
  progress(value,label){
-  progress=clamp(Number(value)/100);
-  const n=Math.round(progress*100);
-  percent.textContent=String(n);
-  progressA11y.setAttribute('aria-valuenow',String(n));
+  // Progress reports from the converter update stage labels, not the cinematic clock.
   if(label){processLabel.textContent=label;statusText.textContent=label}
   wake();
  },
+ complete(){
+  // The generated KMZ must really exist before we permit 100%.
+  if(!demoActive)return Promise.resolve();
+  completionRequested=true;wake();
+  return new Promise(resolve=>{completionResolve=resolve});
+ },
  success(){
-  demoActive=false;progress=1;percent.textContent='100';
-  progressA11y.setAttribute('aria-valuenow','100');
-  setUIState('success',true);
+  if(state!=='success')setUIState('success',true);
  },
  error(message){showError(message||'Не вдалося створити KMZ. Перевір TXT-звіт.')}
 };
@@ -198,10 +209,34 @@ function update(dt){
  hover=mix(hover,wantHover,reduced?1:1-Math.exp(-dt*4));energy=mix(energy,busy?1:state==='success'?.42:state==='hover'?.42:0,reduced?1:1-Math.exp(-dt*2.5));
  aperture=mix(aperture,state==='absorb'?1:state==='hover'?.23:0,reduced?1:1-Math.exp(-dt*4));
  morph=state==='success'?(reduced?1:smooth(stateAge/1.7)):0;burst=state==='success'?(reduced?0:clamp(1-stateAge/2.8)):0;
- // Real progress is supplied by the conversion engine, not a timer.
+ // Smooth visual progress: never claim full completion until the KMZ exists.
  if(demoActive){
   demoElapsed+=dt;
-  if(demoElapsed>=.75&&state==='absorb')setUIState('process');
+  if(demoElapsed>=ABSORB_SECONDS&&state==='absorb')setUIState('process');
+  if(state==='process'){
+   if(completionRequested&&demoElapsed>=VISUAL_MIN_SECONDS){
+    if(completionStartedAt<0){completionStartedAt=demoElapsed;completionStart=progress;}
+    const f=smooth((demoElapsed-completionStartedAt)/FINISH_SECONDS);
+    progress=mix(completionStart,1,f);
+    if(f>=1){
+     progress=1;demoActive=false;
+     setUIState('success',true);
+     const done=completionResolve;completionResolve=null;if(done)done();
+    }
+   }else{
+    const normal=clamp((demoElapsed-ABSORB_SECONDS)/(VISUAL_MIN_SECONDS-ABSORB_SECONDS));
+    // Stay just below 100% if compression is still ongoing after 4.2 seconds.
+    progress=normal*.94;
+    if(demoElapsed>VISUAL_MIN_SECONDS){
+     progress=.94+.055*(1-Math.exp(-(demoElapsed-VISUAL_MIN_SECONDS)/10));
+    }
+   }
+   const n=Math.min(100,Math.floor(progress*100+.001));
+   if(n!==lastPercent){
+    lastPercent=n;percent.textContent=String(n);
+    progressA11y.setAttribute('aria-valuenow',String(n));
+   }
+  }
  }
  for(const packet of packets){
   if(reduced)continue;packet.t+=dt*packet.speed*(.7+energy*2.5);
@@ -358,7 +393,7 @@ stage.addEventListener('dragleave',e=>{if(!isFileDrag(e))return;dragDepth=Math.m
 stage.addEventListener('drop',e=>{if(!isFileDrag(e))return;e.preventDefault();e.stopPropagation();dragDepth=0;acceptFiles(e.dataTransfer.files)});
 media.addEventListener('change',e=>setMotion(e.matches));
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;last=0}else wake()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){tx=ty=0;reset()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!demoActive){tx=ty=0;reset()}});
 if('ResizeObserver' in window)new ResizeObserver(resize).observe(stage);
 window.addEventListener('resize',resize);
 if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);
@@ -521,7 +556,7 @@ async function processFile(file){
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},meta=>setProgress(88+Math.floor(meta.percent*0.11),'Архівація KMZ…'));
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file.name.replace(/\.csv$/i,'')+'.kmz';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   reportLine('Результат: '+a.download);reportLine('Статус: SUCCESS');
-  setProgress(100,'Готово! ✓');
+  await window.geoVisual?.complete();
   setStatus('✓ Готово — KMZ завантажено автоматично.','success');
   }catch(e){
     reportLine('Статус: ERROR');reportLine('Причина: '+e.message);
