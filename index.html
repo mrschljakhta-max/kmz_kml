@@ -15,15 +15,13 @@ button{background:#4cb8f7;border:0;color:#061423;font-size:14px;font-weight:750;
 footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-top:18px}
 #report{background:transparent;color:#aac6e7;border:1px solid #365474;padding:9px 13px;font-size:12px}#report:disabled{opacity:.4;cursor:not-allowed}
 </style></head><body><main>
-<div class="eyebrow">◈ GEO CONVERTER</div>
 <h1>CSV → KMZ.<br>Без зайвих кроків.</h1>
-<p>Завантаж CSV із координатами WGS84 або MGRS — сайт створить KMZ із точками та лініями. Обробка відбувається локально в браузері. Підходить для нейтральних цивільних даних (у т.ч. синтетичних навчальних).</p>
 <section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><input id="file" type="file" accept=".csv,text/csv"></section>
 <div class="row">
   <p id="status" aria-live="polite">Очікування CSV</p>
   <button id="report" type="button" disabled title="Завантажити короткий TXT-звіт">▤ TXT-звіт</button>
 </div>
-<footer>GEO CONVERTER · v2.2 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси. Спеціалізоване перетворення оперативних треків не підтримується.</footer></main>
+</main>
 <script type="module">
 import JSZip from 'https://esm.sh/jszip@3.10.1';
 import * as mgrs from 'https://esm.sh/mgrs@2.1.0';
