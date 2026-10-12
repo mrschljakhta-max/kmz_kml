@@ -75,7 +75,7 @@ function parseCSV(text){
 const normalize=s=>String(s).normalize('NFKC').toLowerCase().replace(/[\uFEFF\u200B\s_\-().]/g,'');
 function column(headers,variants){return headers.find(h=>variants.includes(normalize(h)))}
 function num(s){let v=Number(String(s).trim().replace(',','.'));return s!==''&&Number.isFinite(v)?v:NaN}
-function esc(s){return String(s??'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,''')}
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
 
 function isMgrs(str){
   if(!str) return false;
