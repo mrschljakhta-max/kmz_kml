@@ -19,6 +19,7 @@ footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-item
 #drop.completed{border-color:#4fc88e}
 #drop.failed{border-color:#f19c9c}
 /* Animated progress adapted from the supplied example */
+.drop-default{display:flex;align-items:center;flex-direction:column;gap:10px}
 .drop.is-busy{cursor:default}
 .drop.is-busy .drop-default{display:none}
 .drop-progress{display:none;width:min(100%,540px);padding:18px 14px;pointer-events:none}
@@ -33,7 +34,7 @@ footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-item
 #report{background:transparent;color:#aac6e7;border:1px solid #365474;padding:9px 13px;font-size:12px}#report:disabled{opacity:.4;cursor:not-allowed}
 </style></head><body><main>
 <h1>CSV → KMZ.</h1>
-<section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="drop-default" style="display:flex;align-items:center;flex-direction:column;gap:10px"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><div class="drop-progress" aria-label="Прогрес конвертації"><div class="progress-top"><span class="progress-status" id="progressStatus">Початок…</span><span class="progress-percent" id="progressPercent">0%</span></div><div class="progress-track" id="progressTrack" role="progressbar" aria-label="Прогрес" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progressFill"></div></div><div class="progress-labels"><span>Початок</span><span>Обробка</span><span>Завершення</span></div></div><p id="status" aria-live="polite" role="status"></p></div><input id="file" type="file" accept=".csv,text/csv"></section>
+<section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="drop-default"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><div class="drop-progress" aria-label="Прогрес конвертації"><div class="progress-top"><span class="progress-status" id="progressStatus">Початок…</span><span class="progress-percent" id="progressPercent">0%</span></div><div class="progress-track" id="progressTrack" role="progressbar" aria-label="Прогрес" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progressFill"></div></div><div class="progress-labels"><span>Початок</span><span>Обробка</span><span>Завершення</span></div></div><p id="status" aria-live="polite" role="status"></p></div><input id="file" type="file" accept=".csv,text/csv"></section>
 <div class="row">
   <button id="report" type="button" disabled title="Завантажити короткий TXT-звіт">▤ TXT-звіт</button>
 </div>
