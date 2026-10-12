@@ -22,7 +22,8 @@ footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-item
 <div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">UTF-8 · роздільники ; , або табуляція</span><button id="choose" type="button">Обрати CSV</button></div>
 <input id="file" type="file" accept=".csv,text/csv"></section>
 <section class="panel"><h2>Результат</h2><p id="status" aria-live="polite">Очікую CSV. Підтримуються колонка MGRS або колонки широти й довготи WGS84. Усі початкові поля зберігаються в атрибутах KMZ.</p></section>
-<footer>GEO CONVERTER · v1.2.1 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
+<section class="panel" id="csvPreview" hidden><h2>Перегляд CSV</h2><p id="csvSummary" class="muted"></p><div style="overflow:auto;max-height:340px"><table id="csvTable" style="border-collapse:collapse;font-size:12px;white-space:nowrap"></table></div></section>
+<footer>GEO CONVERTER · v1.3 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
 <script type="module">
 import * as mgrs from 'https://esm.sh/mgrs@2.2.0';
 import JSZip from 'https://esm.sh/jszip@3.10.1';
@@ -55,12 +56,26 @@ const normalize=s=>String(s).normalize('NFKC').toLowerCase().replace(/[\uFEFF\u2
 function column(headers,variants){return headers.find(h=>variants.includes(normalize(h)))}
 function num(s){let v=Number(String(s).trim().replace(',','.'));return s!==''&&Number.isFinite(v)?v:NaN}
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
+function showCsvPreview(headers,records){
+ const panel=document.getElementById('csvPreview'),table=document.getElementById('csvTable');
+ panel.hidden=false;table.replaceChildren();
+ const head=document.createElement('tr');
+ headers.forEach(h=>{const th=document.createElement('th');th.textContent=h;th.style.padding='9px';head.append(th)});
+ table.append(head);
+ records.slice(0,10).forEach(record=>{
+  const tr=document.createElement('tr');
+  headers.forEach(h=>{const td=document.createElement('td');td.textContent=record[h]||'';td.style.padding='9px';td.style.borderTop='1px solid #345377';tr.append(td)});
+  table.append(tr);
+ });
+ document.getElementById('csvSummary').textContent='Успішно прочитано '+records.length.toLocaleString('uk-UA')+' записів, '+headers.length+' колонок. Показано перші 10 рядків.';
+}
 async function processFile(file){
  try{
  if(file.size>20*1024*1024)throw Error('Файл перевищує обмеження 20 МБ');
  if(!/\.csv$/i.test(file.name))throw Error('Оберіть файл .csv');
- setStatus('Обробка CSV…');
+ setStatus('Обробка CSV…');document.getElementById('csvPreview').hidden=true;
  const {headers,records}=parseCSV(await file.text());
+ showCsvPreview(headers,records);
  const mc=column(headers,['mgrs','mgrscoordinate','mgrscoordinates','координатимгрс','мгрс','gridreference','grid']);
  const latc=column(headers,['lat','latitude','широта','y','wgs84lat','wgs84latitude']);
  const lonc=column(headers,['lon','lng','long','longitude','довгота','x','wgs84lon','wgs84longitude']);
