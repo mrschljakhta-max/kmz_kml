@@ -13,22 +13,31 @@ p{color:#adbed6;line-height:1.65}.tag{border:1px solid #345377;padding:7px 13px;
 button{background:#4cb8f7;border:0;color:#061423;font-size:14px;font-weight:750;padding:12px 19px;border-radius:11px;cursor:pointer}button:hover{background:#9de2ff}
 #file{display:none}#status{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;color:#d4e5f7}.error{color:#ffb4b4!important}.success{color:#a8f5bd!important}
 footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-</style></head><body><main>
+ #report{background:transparent;color:#aac6e7;border:1px solid #365474;padding:9px 13px;font-size:12px}#report:disabled{opacity:.4;cursor:not-allowed}#status{font-size:14px;max-width:70%;margin:0} .panel{padding:22px} </style></head><body><main>
 <div class="eyebrow">◈ GEO CONVERTER</div>
 <h1>CSV → KMZ.<br>Без зайвих кроків.</h1>
-<p>Завантаж CSV з координатами <strong>MGRS</strong> або <strong>WGS84</strong>. Отримай KMZ з координатами WGS84 (довгота, широта), готовий для перегляду в GIS. Конвертація відбувається у браузері, без надсилання CSV на сервер.</p>
-<div class="tags"><span class="tag">MGRS → WGS84</span><span class="tag">WGS84 → KMZ</span><span class="tag">Автоматичне завантаження</span><span class="tag">CSV до 20 МБ</span></div>
-<section class="panel"><h2>Завантаження CSV</h2>
-<div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">UTF-8 · роздільники ; , або табуляція</span><button id="choose" type="button">Обрати CSV</button></div>
-<input id="file" type="file" accept=".csv,text/csv"></section>
-<section class="panel"><h2>Результат</h2><p id="status" aria-live="polite">Очікую CSV. Підтримуються колонка MGRS або колонки широти й довготи WGS84. Усі початкові поля зберігаються в атрибутах KMZ.</p></section>
-<section class="panel" id="csvPreview" hidden><h2>Перегляд CSV</h2><p id="csvSummary" class="muted"></p><div style="overflow:auto;max-height:340px"><table id="csvTable" style="border-collapse:collapse;font-size:12px;white-space:nowrap"></table></div></section>
-<footer>GEO CONVERTER · v1.3 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
+<p>Завантаж CSV — сайт автоматично створить KMZ, якщо формат координат підтримується. Обробка відбувається локально в браузері.</p>
+<section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><input id="file" type="file" accept=".csv,text/csv"></section>
+<div class="row" style="justify-content:space-between;margin-top:18px">
+ <p id="status" aria-live="polite">Очікування CSV</p>
+ <button id="report" type="button" disabled title="Завантажити короткий TXT-звіт">▤ TXT-звіт</button>
+</div>
+<footer>GEO CONVERTER · v1.4 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
 <script type="module">
 import * as mgrs from 'https://esm.sh/mgrs@2.2.0';
 import JSZip from 'https://esm.sh/jszip@3.10.1';
 const fileInput=document.getElementById('file'),drop=document.getElementById('drop'),status=document.getElementById('status');
+let reportText='';let reportFile='report.txt';
+const reportBtn=document.getElementById('report');
+function reportLine(message){reportText+='\n'+message}
 const setStatus=(message,kind='')=>{status.textContent=message;status.className=kind};
+reportBtn.addEventListener('click',()=>{
+ if(!reportText)return;
+ const blob=new Blob(['\uFEFF'+reportText],{type:'text/plain;charset=utf-8'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=reportFile;document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),10000);
+});
 document.getElementById('choose').addEventListener('click',e=>{e.stopPropagation();fileInput.click()});
 drop.addEventListener('click',()=>fileInput.click());
 drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click()}});
@@ -56,26 +65,16 @@ const normalize=s=>String(s).normalize('NFKC').toLowerCase().replace(/[\uFEFF\u2
 function column(headers,variants){return headers.find(h=>variants.includes(normalize(h)))}
 function num(s){let v=Number(String(s).trim().replace(',','.'));return s!==''&&Number.isFinite(v)?v:NaN}
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
-function showCsvPreview(headers,records){
- const panel=document.getElementById('csvPreview'),table=document.getElementById('csvTable');
- panel.hidden=false;table.replaceChildren();
- const head=document.createElement('tr');
- headers.forEach(h=>{const th=document.createElement('th');th.textContent=h;th.style.padding='9px';head.append(th)});
- table.append(head);
- records.slice(0,10).forEach(record=>{
-  const tr=document.createElement('tr');
-  headers.forEach(h=>{const td=document.createElement('td');td.textContent=record[h]||'';td.style.padding='9px';td.style.borderTop='1px solid #345377';tr.append(td)});
-  table.append(tr);
- });
- document.getElementById('csvSummary').textContent='Успішно прочитано '+records.length.toLocaleString('uk-UA')+' записів, '+headers.length+' колонок. Показано перші 10 рядків.';
-}
 async function processFile(file){
+ reportText='GEO CONVERTER — CSV REPORT\nФайл: '+file.name+'\nРозмір: '+file.size+' байтів';
+ reportFile=file.name.replace(/\.csv$/i,'')+'_report.txt';
+ reportBtn.disabled=true;
  try{
  if(file.size>20*1024*1024)throw Error('Файл перевищує обмеження 20 МБ');
  if(!/\.csv$/i.test(file.name))throw Error('Оберіть файл .csv');
- setStatus('Обробка CSV…');document.getElementById('csvPreview').hidden=true;
+ setStatus('Обробка CSV…');
  const {headers,records}=parseCSV(await file.text());
- showCsvPreview(headers,records);
+ reportLine('Записів: '+records.length);reportLine('Колонок: '+headers.length);reportLine('Імпорт: успішно');
  const mc=column(headers,['mgrs','mgrscoordinate','mgrscoordinates','координатимгрс','мгрс','gridreference','grid']);
  const latc=column(headers,['lat','latitude','широта','y','wgs84lat','wgs84latitude']);
  const lonc=column(headers,['lon','lng','long','longitude','довгота','x','wgs84lon','wgs84longitude']);
@@ -88,6 +87,7 @@ async function processFile(file){
       +'Назви колонок у файлі: '+found+'.';
    throw Error('Не знайдено підтримувану колонку MGRS або пару широта/довгота WGS84.\\n'+detail);
  }
+ reportLine('Координати: '+(mc?'MGRS':latc+' / '+lonc));
  const namec=column(headers,['name','title','назва','найменування','object','обєкт','id']);
  let placemarks=[],errors=[];
  records.forEach((record,i)=>{
@@ -103,13 +103,19 @@ async function processFile(file){
  placemarks.push('<Placemark><name>'+esc(name)+'</name><ExtendedData>'+attrs+'<Data name="WGS84_lat"><value>'+lat.toFixed(8)+'</value></Data><Data name="WGS84_lon"><value>'+lon.toFixed(8)+'</value></Data></ExtendedData><Point><coordinates>'+lon.toFixed(8)+','+lat.toFixed(8)+',0</coordinates></Point></Placemark>');
  }catch(e){errors.push('Рядок '+(i+2)+': '+e.message)}
  });
+ reportLine('Помилкових рядків: '+errors.length);
  if(errors.length)throw Error('Конвертацію зупинено: '+errors.length+' помилкових рядків.\n'+errors.slice(0,12).join('\n')+(errors.length>12?'\n…':''));
  if(!placemarks.length)throw Error('Немає точок для конвертації');
  const xml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+esc(file.name)+'</name>'+placemarks.join('')+'</Document></kml>';
  const zip=new JSZip();zip.file('doc.kml',xml);
  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file.name.replace(/\.csv$/i,'')+'.kmz';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
- setStatus('Готово! '+placemarks.length+' точок конвертовано у WGS84. Файл '+a.download+' завантажено автоматично.','success');
- }catch(e){setStatus('Помилка: '+e.message,'error');console.error(e)}
+ reportLine('Експортовано: '+placemarks.length);reportLine('Результат: '+a.download);reportLine('Статус: SUCCESS');
+ setStatus('✓ Готово — KMZ завантажено автоматично.','success');
+ }catch(e){
+   reportLine('Статус: ERROR');reportLine('Причина: '+e.message);
+   setStatus('Не вдалося створити KMZ. Деталі — у TXT-звіті.','error');
+   console.error(e);
+ }finally{reportBtn.disabled=false}
 }
 </script></body></html>
