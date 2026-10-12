@@ -194,7 +194,10 @@ window.geoVisual={
  complete(){
   // The generated KMZ must really exist before we permit 100%.
   if(!demoActive)return Promise.resolve();
-  completionRequested=true;wake();
+  completionRequested=true;
+  processLabel.textContent='Завершення…';
+  statusText.textContent='KMZ створено. Завершення анімації…';
+  wake();
   return new Promise(resolve=>{completionResolve=resolve});
  },
  success(){
