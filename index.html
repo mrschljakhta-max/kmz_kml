@@ -1,78 +1,390 @@
 <!doctype html>
-<html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GEO CONVERTER — CSV → KMZ</title>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080c13">
+<title>GEO — Digital Core II</title>
 <style>
-:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:#080e1b;color:#eaf2ff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#15315a 0,transparent 44%),#080e1b;min-height:100vh}
-main{max-width:920px;margin:auto;padding:52px 22px 70px}.eyebrow{letter-spacing:.2em;font-size:12px;color:#80caff;font-weight:750}
-h1{font-size:clamp(35px,7vw,68px);line-height:1.07;letter-spacing:-.05em;margin:15px 0 18px}
-p{color:#adbed6;line-height:1.65}
-.panel{border:1px solid #254064;background:#111e34df;border-radius:21px;padding:26px;margin-top:18px;box-shadow:0 22px 60px #0003}
-.drop{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;min-height:218px;border:2px dashed #43658d;border-radius:15px;cursor:pointer;transition:.15s;background:#0c1729}
-.drop:hover,.drop.drag{border-color:#53c8ff;background:#152a46}.symbol{font-size:38px;color:#77d8ff}.muted{font-size:13px;color:#92a9c8}
-button{background:#4cb8f7;border:0;color:#061423;font-size:14px;font-weight:750;padding:12px 19px;border-radius:11px;cursor:pointer}button:hover{background:#9de2ff}
-#file{display:none}#status{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;color:#d4e5f7;font-size:14px;max-width:70%}.error{color:#ffb4b4!important}.success{color:#a8f5bd!important}
-footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-top:18px}
-#drop #status{max-width:100%;text-align:center;line-height:1.5;margin:5px 12px 0;font-size:14px;font-weight:650}
-#drop #status:empty{display:none}
-#drop.processing{border-color:#66baff}
-#drop.completed{border-color:#4fc88e}
-#drop.failed{border-color:#f19c9c}
-/* Animated progress adapted from the supplied example */
-.drop-default{display:flex;align-items:center;flex-direction:column;gap:10px}
-.drop.is-busy{cursor:default}
-.drop.is-busy .drop-default{display:none}
-.drop-progress{display:none;width:min(100%,540px);padding:18px 14px;pointer-events:none}
-.drop.is-busy .drop-progress{display:block}
-.progress-top{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:14px}
-.progress-status{color:#c1c7dc;font-size:15px}
-.progress-percent{font-size:clamp(36px,8vw,48px);font-weight:850;line-height:1;letter-spacing:-.055em;font-variant-numeric:tabular-nums}
-.progress-track{height:17px;border-radius:99px;background:#30354c;overflow:hidden}
-.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#8170ff,#43b9dc,#35dfc4);border-radius:inherit;transition:width .12s linear}
-.progress-labels{display:flex;justify-content:space-between;color:#8790ae;font-size:12px;margin-top:15px;gap:8px}
-@media(prefers-reduced-motion:reduce){.progress-fill{transition:none}}
-#report{background:transparent;color:#aac6e7;border:1px solid #365474;padding:9px 13px;font-size:12px}#report:disabled{opacity:.4;cursor:not-allowed}
-</style></head><body><main>
-<h1>CSV → KMZ.</h1>
-<section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="drop-default"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><div class="drop-progress" aria-label="Прогрес конвертації"><div class="progress-top"><span class="progress-status" id="progressStatus">Початок…</span><span class="progress-percent" id="progressPercent">0%</span></div><div class="progress-track" id="progressTrack" role="progressbar" aria-label="Прогрес" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progressFill"></div></div><div class="progress-labels"><span>Початок</span><span>Обробка</span><span>Завершення</span></div></div><p id="status" aria-live="polite" role="status"></p></div><input id="file" type="file" accept=".csv,text/csv"></section>
-<div class="row">
-  <button id="report" type="button" disabled title="Завантажити короткий TXT-звіт">▤ TXT-звіт</button>
-</div>
+:root{color-scheme:dark;--bg:#080c13;--text:#ebf2f9;--dim:#8799ad;--ice:#a6def2;--mint:#a2e7cf;--mx:0px;--my:0px}
+*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;min-width:280px;min-height:100svh;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font:inherit;color:inherit;cursor:pointer}button:focus-visible{outline:2px solid #b2e7ff;outline-offset:5px}button:disabled{cursor:default}button,svg{-webkit-tap-highlight-color:transparent}button svg{pointer-events:none}button[hidden],[hidden]{display:none!important}
+.atmosphere{position:fixed;inset:-10%;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 47%,#1b34434d,transparent 47%),radial-gradient(ellipse at 85% 16%,#1c24322c,transparent 32%),radial-gradient(ellipse at 10% 85%,#19323f21,transparent 33%);transform:translate(calc(var(--mx)*-.2),calc(var(--my)*-.2));transition:transform 1.6s ease-out}
+.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.13;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' opacity='.15' filter='url(%23n)' d='M0 0h180v180H0z'/%3E%3C/svg%3E")}
+.contours{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:.19;transform:translate(calc(var(--mx)*-.4),calc(var(--my)*-.4));transition:transform 1.6s ease-out;mask-image:linear-gradient(100deg,#000,transparent 37%,transparent 63%,#000)}
+.topbar{position:absolute;top:28px;left:36px;right:36px;z-index:4;display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{display:flex;align-items:center;gap:10px;font-size:12px;letter-spacing:.14em;font-weight:650}.brand svg{width:27px;height:27px;color:#acc7d8}.brand small{color:#7c8b9e;font-weight:400;letter-spacing:.055em}.top-actions{display:flex;align-items:center;gap:22px}.edition{font:10px "SFMono-Regular",Consolas,monospace;letter-spacing:.12em;color:#7f91a4}.edition b{color:#b6d3dd;font-weight:400}.motion{display:flex;align-items:center;justify-content:center;gap:8px;background:#10192388;border:1px solid #90b5c423;border-radius:100px;min-height:36px;padding:8px 13px;font-size:11px;color:#a6b8c8;transition:background .25s,border-color .25s}.motion:hover{border-color:#8dbece66;background:#182634}.motion svg{width:14px;height:14px}.motion[aria-pressed=true]{color:#d3e8ef;border-color:#82b4c45c}
+main{position:relative;z-index:1;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:92px 16px 125px}.hero{text-align:center;z-index:2;animation:arrive 1.2s ease both}.eyebrow{margin:0 0 15px;font:10px "SFMono-Regular",Consolas,monospace;letter-spacing:.24em;color:#86a2b4}.eyebrow::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#add4e1;margin:0 9px 1px 0;box-shadow:0 0 10px #a5d9f166}h1{display:flex;align-items:center;justify-content:center;gap:19px;margin:0;font-size:clamp(37px,5.2vw,62px);font-weight:570;letter-spacing:-.065em;line-height:1.08}h1 svg{width:42px;height:32px;color:#829cac;stroke-width:1.25}.hero-subtitle{font-size:12px;letter-spacing:.035em;color:#899cad;margin:15px 0 0}
+.stage{position:relative;width:min(606px,61svh,calc(100vw - 12px));aspect-ratio:1;flex:none;margin:-1px 0 -16px;isolation:isolate;touch-action:pan-y;animation:arrive 1.5s .1s ease both}.stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.portal-hit{position:absolute;inset:15.8%;z-index:3;background:transparent;border:0;border-radius:50%;outline-offset:12px!important}.portal-hit:disabled{pointer-events:none}.portal-hit:focus-visible{outline:1px solid #b5e7f5;box-shadow:0 0 60px #65aac519}
+.portal-copy{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:54%;z-index:2;display:flex;align-items:center;flex-direction:column;text-align:center;pointer-events:none;opacity:1;transition:opacity .4s,transform .7s cubic-bezier(.2,.8,.2,1);text-shadow:0 2px 22px #02060f}.upload-icon{height:35px;width:35px;margin-bottom:18px;color:#b9dbe9;filter:drop-shadow(0 0 9px #86d2ec33);transition:transform .65s,color .45s}.portal-copy strong{font-size:clamp(16px,2vw,19px);font-weight:500;letter-spacing:-.015em}.portal-copy .choose{font-size:13px;letter-spacing:.015em;color:#a1b8c9;margin-top:8px}.choose span{padding-bottom:3px;border-bottom:1px solid #93c7dc4a}.portal-copy .format{margin-top:22px;color:#708c9f;font:9px "SFMono-Regular",Consolas,monospace;letter-spacing:.14em}.stage[data-state=hover] .portal-copy{transform:translate(-50%,-50%) scale(1.035)}.stage[data-state=hover] .upload-icon{transform:translateY(-4px);color:#e3f6ff}.stage[data-state=hover] .choose{color:#c8e8f6}.stage[data-state=absorb] .portal-copy,.stage[data-state=process] .portal-copy,.stage[data-state=success] .portal-copy{opacity:0;transform:translate(-50%,-50%) scale(.9)}
+.process-copy{position:absolute;top:50%;left:50%;transform:translate(-50%,-44%);width:55%;text-align:center;pointer-events:none;opacity:0;z-index:2;transition:opacity .45s,transform .55s}.stage[data-state=process] .process-copy{opacity:1;transform:translate(-50%,-50%)}.percentage{display:flex;justify-content:center;align-items:baseline;gap:3px;font-size:clamp(36px,5vw,54px);line-height:1;font-weight:300;letter-spacing:-.06em;color:#e4f5ff;text-shadow:0 0 35px #6dbde751}.percentage small{font-size:15px;color:#9bbaca;letter-spacing:0}.process-copy p{margin:13px 0 0;font-size:11px;letter-spacing:.02em;color:#97b2c4}.success-copy{position:absolute;top:67%;left:50%;transform:translate(-50%,12px);z-index:2;text-align:center;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .75s .7s,transform .75s .7s}.stage[data-state=success] .success-copy{opacity:1;transform:translate(-50%,0)}.success-copy strong{display:block;font-size:18px;font-weight:500;color:#c9f2e4;letter-spacing:.015em}.success-copy small{display:block;margin-top:8px;color:#819f99;font-size:10px;letter-spacing:.04em}
+.side-tag{position:absolute;top:49.6%;font:9px "SFMono-Regular",Consolas,monospace;letter-spacing:.10em;color:#718697;pointer-events:none;writing-mode:vertical-rl;text-orientation:mixed}.side-tag.left{left:2%;transform:rotate(180deg)}.side-tag.right{right:2%}.side-tag::before{content:"";display:inline-block;height:22px;width:1px;margin-bottom:10px;background:linear-gradient(transparent,#8cb4c377)}
+.status{height:82px;width:min(355px,calc(100vw - 48px));display:flex;flex-direction:column;align-items:center;z-index:3;text-align:center}.status-line{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:20px;color:#adc1cd;font-size:12px}.status-dot{width:4px;height:4px;background:#94c3d1;border-radius:50%;flex:none;box-shadow:0 0 8px #80c8df55}.status[data-kind=success] .status-dot{background:#a1e3c4}.status[data-kind=error] .status-dot{background:#ecb093}.status[data-kind=error] .status-text{color:#efb59e}.filename{font:10px "SFMono-Regular",Consolas,monospace;color:#6e8597;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:9px;height:15px}.demo-start{border:0;background:transparent;font-size:11px;color:#8cafbf;padding:11px 14px;border-radius:6px;transition:color .25s}.demo-start:hover{color:#d3edf8}.demo-start svg{width:11px;height:11px;margin-right:7px;vertical-align:-1px}.steps{display:flex;align-items:center;justify-content:center;gap:5px;height:26px;margin-top:6px}.step{height:2px;width:42px;border-radius:2px;background:#22333f;overflow:hidden}.step::before{content:"";height:100%;display:block;background:#a3d4e6;transform:scaleX(0);transform-origin:left;transition:transform .5s,background .5s}.step.active::before{transform:scaleX(1)}.step.done::before{background:#a0dec8}
+.dock-wrap{position:fixed;z-index:10;bottom:27px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 28px);text-align:center}.dock{display:flex;align-items:center;gap:4px;padding:6px;border-radius:15px;border:1px solid #8aa5b128;background:linear-gradient(125deg,#17232cda,#101922e8);box-shadow:0 16px 60px #0005,inset 0 1px 0 #d6edf006;backdrop-filter:blur(20px)}.dock button{position:relative;min-height:38px;padding:9px 17px;border:1px solid transparent;background:transparent;border-radius:10px;display:flex;gap:9px;align-items:center;font-size:11px;color:#8fa6b6;transition:background .25s,border-color .25s,color .25s}.dock button em{font:9px "SFMono-Regular",Consolas,monospace;color:#617d90;font-style:normal}.dock button:hover{background:#c7e9f509;color:#d2e6ef}.dock button[aria-pressed=true]{background:#9cc6d114;border-color:#b8e4f329;color:#d7edf6;box-shadow:inset 0 1px 0 #c7e9f507}.dock button[aria-pressed=true] em{color:#a2c8d6}.footnote{position:fixed;bottom:7px;left:14px;right:14px;z-index:9;text-align:center;font-size:9px;letter-spacing:.035em;color:#667b8e}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.reduced *,.reduced *::before,.reduced *::after{animation:none!important;transition-duration:.01ms!important;transition-delay:0s!important}.reduced .atmosphere,.reduced .contours{transform:none}.reduced .stage[data-state=hover] .portal-copy{transform:translate(-50%,-50%)}
+@keyframes arrive{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@media(max-height:800px) and (min-width:601px){main{padding-top:75px;padding-bottom:111px}.stage{width:min(510px,58svh)}.eyebrow{margin-bottom:10px}h1{font-size:49px}.hero-subtitle{margin-top:10px}.status{height:67px}}
+@media(max-width:600px){.topbar{top:19px;left:20px;right:20px}.brand small,.edition{display:none}.top-actions{gap:0}.motion{font-size:10px;padding:8px 10px}.brand{font-size:11px}.brand svg{width:24px;height:24px}main{padding-top:94px;padding-bottom:130px}.eyebrow{font-size:9px;letter-spacing:.19em;margin-bottom:13px}h1{font-size:45px;gap:17px}h1 svg{width:33px}.hero-subtitle{font-size:11px;margin-top:12px}.stage{width:calc(100vw - 10px);max-width:510px;margin-top:7px;margin-bottom:-2px}.side-tag{font-size:8px}.upload-icon{height:27px;width:27px;margin-bottom:13px}.portal-copy .choose{font-size:12px}.portal-copy .format{font-size:8px;margin-top:17px}.status{height:75px}.status-line{font-size:11px}.dock-wrap{bottom:34px}.dock{padding:5px;gap:2px;border-radius:13px}.dock button{padding:9px 11px;min-height:39px;font-size:10px;gap:5px}.dock button em{font-size:8px}.footnote{bottom:9px;font-size:8px;line-height:1.35}.success-copy strong{font-size:15px}.success-copy small{font-size:9px}.process-copy p{font-size:10px}.percentage{font-size:37px}}
+@media(max-width:350px){.dock button em{display:none}.dock button{padding:10px 12px}.portal-copy strong{font-size:15px}.topbar{left:15px;right:15px}.motion span{display:none}h1{font-size:39px}.status{width:calc(100vw - 38px)}}
+@media(prefers-reduced-motion:reduce){.hero,.stage{animation:none}}
+
+.report-button{font:11px "SFMono-Regular",Consolas,monospace;color:#b5cbd9;background:#12222d8c;border:1px solid #89b9ce50;border-radius:10px;padding:10px 14px;transition:background .2s}
+.report-button:hover:not(:disabled){background:#20394a}
+.report-button:disabled{opacity:.32;cursor:not-allowed}
+.stage[data-state=error] .portal-copy strong{color:#efb59e}
+.stage[data-state=error] .portal-copy .choose{color:#a3bdcc}
+/* Full-screen composition: the core takes priority. */
+main{padding:8px 12px 10px;min-height:100svh;justify-content:center}
+.stage{width:min(calc(100vw - 24px),calc(100svh - 98px));max-width:none;margin:0;aspect-ratio:1}
+.portal-hit{inset:8%}
+.status{height:72px;flex:none;width:min(430px,calc(100vw - 40px))}
+.portal-copy strong{font-size:clamp(18px,2.2vw,25px)}
+.portal-copy .choose{font-size:14px;margin-top:11px}
+.portal-copy .format{font-size:10px;margin-top:24px}
+.upload-icon{width:42px;height:42px;margin-bottom:21px}
+.percentage{font-size:clamp(44px,7vw,76px)}
+.percentage small{font-size:19px}
+.process-copy p{font-size:13px}
+.success-copy strong{font-size:23px}
+.success-copy small{font-size:11px}
+@media(max-width:600px){
+ main{padding:8px 4px 10px}
+ .stage{width:min(calc(100vw - 8px),calc(100svh - 98px));margin:0}
+ .topbar{top:18px;left:19px;right:19px}
+ .portal-copy .choose{font-size:13px}
+ .portal-copy .format{font-size:9px;margin-top:19px}
+ .upload-icon{width:33px;height:33px;margin-bottom:16px}
+ .percentage{font-size:48px}
+ .process-copy p{font-size:11px}
+ .success-copy strong{font-size:19px}
+}
+
+/* The transparent drawing surface covers the viewport, with no scene-sized crop. */
+.scene{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1;background:transparent;border:0;outline:0}
+main{z-index:2}
+.stage{width:min(calc(100vw - 24px),calc(100svh - 38px));isolation:auto;animation:none;background:transparent;border:0;box-shadow:none;overflow:visible}
+@media(max-width:600px){.stage{width:min(calc(100vw - 8px),calc(100svh - 38px))}}
+</style>
+</head>
+<body>
+<canvas id="scene" class="scene" aria-hidden="true"></canvas>
+<div class="atmosphere" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div>
+<svg class="contours" viewBox="0 0 1440 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#61899c" stroke-width=".65"><path d="M-80 180C160 60 315 268 160 389S-20 542 44 704 329 721 350 994M-70 211C150 110 270 274 143 388S-40 554 20 713 279 757 300 1010M-60 242C126 153 223 282 126 387S-65 566-4 722 229 784 250 1026M-50 273C98 194 178 290 109 386S-83 575-29 731 179 812 200 1042M-40 304C74 236 135 295 92 385S-106 587-54 740 129 840 150 1058M-30 335C46 277 92 305 75 384S-125 595-79 749 79 868 100 1074"/><path d="M1100-40C968 140 1230 214 1350 316S1258 584 1430 677M1135-35C1014 137 1260 197 1380 305S1298 578 1465 650M1170-30C1060 134 1290 180 1410 294S1338 572 1500 623M1205-25C1106 131 1320 163 1440 283S1378 566 1535 596M1240-20C1152 128 1350 146 1470 272S1418 560 1570 569M1275-15C1198 125 1380 129 1500 261S1458 554 1605 542"/></g></svg>
+<header class="topbar"><div class="brand"><svg viewBox="0 0 30 30" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="10" stroke="currentColor" stroke-width=".8"/><ellipse cx="15" cy="15" rx="5" ry="12" transform="rotate(48 15 15)" stroke="currentColor" stroke-width=".8"/><circle cx="23" cy="8" r="2" fill="#c4e8f2"/></svg>GEO <small>/ converter</small></div><button id="report" class="report-button" type="button" disabled title="Завантажити TXT-звіт">TXT-звіт ↓</button></header>
+<main aria-label="Конвертер CSV у KMZ">
+ <section class="stage" id="stage" data-state="idle" aria-label="Цифрове ядро — завантаження CSV">
+  <button type="button" class="portal-hit" id="dropzone" aria-label="Обрати CSV для конвертації"></button>
+  <div class="portal-copy" id="portalCopy" aria-hidden="true"><svg class="upload-icon" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.15"><path d="M12 26H9a6 6 0 0 1-.5-12 11.7 11.7 0 0 1 22.9 1.9A5.1 5.1 0 0 1 31 26h-3"/><path d="M20 33V17m-6 6 6-6 6 6"/></svg><strong id="dropText">Перетягни CSV</strong><span class="choose">або <span>обери файл</span></span><span class="format">.CSV → .KMZ</span></div>
+  <div class="process-copy" aria-hidden="true"><div class="percentage"><span id="percent">0</span><small>%</small></div><p id="processLabel">Упорядкування даних</p></div>
+  <div class="success-copy" aria-hidden="true"><strong>Готово</strong><small>Обрати інший CSV</small></div>
+  <input type="file" id="file" accept=".csv,text/csv" hidden>
+ </section>
+ <p class="sr-only" id="statusText" role="status" aria-live="polite">Готовий прийняти твій файл</p>
+ <div id="progressA11y" class="sr-only" role="progressbar" aria-label="Прогрес конвертації" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden></div>
 </main>
+<noscript><p style="text-align:center;position:fixed;bottom:100px;left:20px;right:20px">Увімкни JavaScript, щоб побачити анімацію.</p></noscript>
+<script>
+/* DIGITAL CORE II — standalone visual prototype. No file contents are read.
+   No network requests, external fonts, packages, analytics or conversion logic.
+   Canvas uses depth-sorted geometry, cached light sprites and time-based motion. */
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const canvas=$('scene'),ctx=canvas.getContext('2d',{alpha:true});
+const stage=$('stage'),hit=$('dropzone'),input=$('file'),statusText=$('statusText');
+const percent=$('percent'),processLabel=$('processLabel');
+const progressA11y=$('progressA11y');
+const media=matchMedia('(prefers-reduced-motion: reduce)');
+const PI=Math.PI,TAU=PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t;
+const smooth=t=>{t=clamp(t);return t*t*(3-2*t)},ease=t=>1-Math.pow(1-clamp(t),3);
+let seed=17042;const random=()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296};
+const rand=(a,b)=>a+(b-a)*random();
+let W=600,H=600,R=198,viewW=600,viewH=600,sceneX=0,sceneY=0,dpr=1,time=0,yaw=.4,state='idle',stateAge=0,hover=0,energy=0,aperture=0;
+let tx=0,ty=0,px=0,py=0,hoverLock=false,dragDepth=0,demoActive=false,demoElapsed=0,progress=0;
+let reduced=media.matches,last=0,raf=0,lastPercent=-1,phase=-1,filename='example.csv';
+let morph=0,burst=0,quality=1,frameAverage=16;
+const V=(x,y,z)=>({x,y,z});
+function normalize(p){const n=Math.hypot(p.x,p.y,p.z)||1;return V(p.x/n,p.y/n,p.z/n)}
+function rotate(p,a,b,c=0){const ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b),cc=Math.cos(c),sc=Math.sin(c);const x=p.x*ca-p.z*sa,z=p.x*sa+p.z*ca,y=p.y*cb-z*sb,zz=p.y*sb+z*cb;return V(x*cc-y*sc,x*sc+y*cc,zz)}
+function project(p,factor=1){const persp=3.7/(3.7-p.z*.45);return {x:W*.5+p.x*R*persp*factor,y:H*.5+p.y*R*persp*factor,z:p.z,s:persp}}
+function makeShell(){
+ const t=(1+Math.sqrt(5))/2;
+ let vertices=[V(-1,t,0),V(1,t,0),V(-1,-t,0),V(1,-t,0),V(0,-1,t),V(0,1,t),V(0,-1,-t),V(0,1,-t),V(t,0,-1),V(t,0,1),V(-t,0,-1),V(-t,0,1)].map(normalize);
+ let faces=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+ for(let level=0;level<2;level++){
+  const cache=new Map();const midpoint=(a,b)=>{const key=Math.min(a,b)+':'+Math.max(a,b);if(cache.has(key))return cache.get(key);const p=vertices[a],q=vertices[b],i=vertices.length;vertices.push(normalize(V((p.x+q.x)*.5,(p.y+q.y)*.5,(p.z+q.z)*.5)));cache.set(key,i);return i};
+  const next=[];for(const [a,b,c] of faces){const ab=midpoint(a,b),bc=midpoint(b,c),ca=midpoint(c,a);next.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca])}faces=next;
+ }
+ const edgeMap=new Map(),adj=vertices.map(()=>[]);
+ for(const [a,b,c] of faces)for(const [i,j] of [[a,b],[b,c],[c,a]]){const key=Math.min(i,j)+':'+Math.max(i,j);if(!edgeMap.has(key)){edgeMap.set(key,[i,j]);adj[i].push(j);adj[j].push(i)}}
+ return {vertices,faces,edges:[...edgeMap.values()],adj};
+}
+const shell=makeShell();
+const packets=Array.from({length:23},()=>{const a=Math.floor(random()*shell.vertices.length),choices=shell.adj[a];return {a,b:choices[Math.floor(random()*choices.length)],prev:-1,t:random(),speed:rand(.3,.7),trail:[]}});
+const particles=Array.from({length:680},()=>{const z=rand(-1,1),a=rand(0,TAU),rad=Math.cbrt(random())*.74,q=Math.sqrt(1-z*z);return {p:V(q*Math.cos(a)*rad,z*rad,q*Math.sin(a)*rad),a:rand(0,TAU),speed:rand(.17,.6),size:rand(.4,1.45),brightness:rand(.3,1),target:random()}});
+const stars=Array.from({length:74},()=>({x:rand(-1.45,1.45),y:rand(-1.32,1.32),r:rand(.35,.8),a:rand(.06,.28),phase:rand(0,TAU)}));
+const fragments=Array.from({length:155},()=>({x:rand(-.18,.18),y:rand(-.23,.23),delay:rand(0,.5),spin:rand(-1,1),phase:rand(0,TAU),size:rand(.7,1.9)}));
+const glyphPaths=[[-.22,-.34,.1,-.34],[.1,-.34,.24,-.2],[.24,-.2,.24,.29],[.24,.29,-.22,.29],[-.22,.29,-.22,-.34],[.1,-.34,.1,-.2],[.1,-.2,.24,-.2],[-.155,-.075,-.155,.06],[-.155,0,-.09,-.075],[-.155,0,-.09,.06],[-.04,.06,-.04,-.075],[-.04,-.075,.007,-.01],[.007,-.01,.052,-.075],[.052,-.075,.052,.06],[.095,-.075,.18,-.075],[.18,-.075,.095,.06],[.095,.06,.18,.06],[-.07,.17,-.015,.22],[-.015,.22,.095,.12]];
+const glyph=[];for(const [x1,y1,x2,y2] of glyphPaths){const count=Math.ceil(Math.hypot(x2-x1,y2-y1)*175);for(let i=0;i<count;i++)glyph.push(V(mix(x1,x2,i/count),mix(y1,y2,i/count)-.06,0))}
+// Cached radial lights: no per-particle shadow blur or gradient allocation.
+function lightSprite(rgb){const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d'),g=x.createRadialGradient(48,48,0,48,48,48);g.addColorStop(0,`rgba(${rgb},1)`);g.addColorStop(.06,`rgba(${rgb},.8)`);g.addColorStop(.22,`rgba(${rgb},.19)`);g.addColorStop(.55,`rgba(${rgb},.035)`);g.addColorStop(1,`rgba(${rgb},0)`);x.fillStyle=g;x.fillRect(0,0,96,96);return c}
+const blue=lightSprite('133,213,250'),white=lightSprite('218,241,255'),mint=lightSprite('151,242,207');
+function light(x,y,r,a,sprite=blue){if(a<=0||r<=0)return;ctx.globalAlpha=clamp(a);ctx.drawImage(sprite,x-r,y-r,r*2,r*2);ctx.globalAlpha=1}
+function line(a,b,color,width=.65){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
+function resize(){
+ const rect=stage.getBoundingClientRect();W=rect.width||600;H=rect.height||W;R=W*.415;
+ viewW=window.innerWidth||W;viewH=window.innerHeight||H;sceneX=rect.left;sceneY=rect.top;
+ dpr=Math.min(window.devicePixelRatio||1,W<450?1.65:2,Math.sqrt(3600000/(viewW*viewH)));
+ canvas.width=Math.round(viewW*dpr);canvas.height=Math.round(viewH*dpr);
+ // Keep the core aligned with its controls; the light is free to extend across the page.
+ ctx.setTransform(dpr,0,0,dpr,sceneX*dpr,sceneY*dpr);quality=W<450?.66:1;wake();
+}
+function setUIState(next,force=false){
+ if(state===next&&!force)return;state=next;stateAge=0;stage.dataset.state=next;hit.disabled=['absorb','process'].includes(next);stage.setAttribute('aria-busy',String(['absorb','process'].includes(next)));
+ $('portalCopy').setAttribute('aria-hidden',String(['absorb','process','success'].includes(next)));
+ hit.setAttribute('aria-label',next==='success'?'Обрати інший CSV':'Обрати CSV для конвертації');
+ progressA11y.hidden=!['absorb','process'].includes(next);
+ if(next==='idle'||next==='hover'){
+  statusText.textContent=next==='hover'?'Відпусти файл у центрі сфери':'Готовий прийняти твій файл';
+  $('dropText').textContent=next==='hover'?'Відпусти CSV тут':'Перетягни CSV';
+ }
+ if(next==='absorb'){statusText.textContent='Поглинання файлу '+filename;phase=0;}
+ if(next==='process'){statusText.textContent='Упорядкування даних';phase=-1}
+ if(next==='success'){statusText.textContent='KMZ сформовано. Можна обрати інший CSV.';burst=1;}
+ wake();
+}
+function reset(hovering=false){demoActive=false;demoElapsed=0;progress=0;phase=-1;lastPercent=-1;morph=0;burst=0;dragDepth=0;hoverLock=hovering;setUIState(hovering?'hover':'idle',true);wake()}
+function startDemo(name='example.csv'){
+ filename=name;hoverLock=false;demoElapsed=0;progress=0;morph=0;burst=0;lastPercent=-1;demoActive=true;dragDepth=0;setUIState('absorb',true);percent.textContent='0';progressA11y.setAttribute('aria-valuenow','0');wake();
+}
+function showError(message){
+ demoActive=false;demoElapsed=0;progress=0;
+ setUIState('error',true);
+ statusText.textContent=message;
+ $('dropText').textContent='Помилка конвертації';
+ hit.disabled=false;
+ wake();
+}
+function acceptFiles(files){
+ if(demoActive)return;
+ if(!files||files.length!==1){showError('Оберіть один CSV');return}
+ const file=files[0];
+ if(!/\.csv$/i.test(file.name)){showError('Потрібен файл .csv');return}
+ if(file.size>20*1024*1024){showError('CSV перевищує 20 МБ');return}
+ startDemo(file.name);
+ window.geoPendingFile=file;
+ window.dispatchEvent(new Event('geo:input'));
+}
+window.geoVisual={
+ progress(value,label){
+  progress=clamp(Number(value)/100);
+  const n=Math.round(progress*100);
+  percent.textContent=String(n);
+  progressA11y.setAttribute('aria-valuenow',String(n));
+  if(label){processLabel.textContent=label;statusText.textContent=label}
+  wake();
+ },
+ success(){
+  demoActive=false;progress=1;percent.textContent='100';
+  progressA11y.setAttribute('aria-valuenow','100');
+  setUIState('success',true);
+ },
+ error(message){showError(message||'Не вдалося створити KMZ. Перевір TXT-звіт.')}
+};
+function update(dt){
+ stateAge+=dt;
+ if(!reduced){time+=dt;yaw+=dt*(.065+energy*.12);px+= (tx-px)*Math.min(1,dt*4.5);py+=(ty-py)*Math.min(1,dt*4.5)}else{px=0;py=0}
+ const busy=state==='absorb'||state==='process',wantHover=state==='hover'||state==='absorb'?1:0;
+ hover=mix(hover,wantHover,reduced?1:1-Math.exp(-dt*4));energy=mix(energy,busy?1:state==='success'?.42:state==='hover'?.42:0,reduced?1:1-Math.exp(-dt*2.5));
+ aperture=mix(aperture,state==='absorb'?1:state==='hover'?.23:0,reduced?1:1-Math.exp(-dt*4));
+ morph=state==='success'?(reduced?1:smooth(stateAge/1.7)):0;burst=state==='success'?(reduced?0:clamp(1-stateAge/2.8)):0;
+ // Real progress is supplied by the conversion engine, not a timer.
+ if(demoActive){
+  demoElapsed+=dt;
+  if(demoElapsed>=.75&&state==='absorb')setUIState('process');
+ }
+ for(const packet of packets){
+  if(reduced)continue;packet.t+=dt*packet.speed*(.7+energy*2.5);
+  while(packet.t>=1){packet.t-=1;const old=packet.a;packet.prev=old;packet.a=packet.b;const choices=shell.adj[packet.a].filter(x=>x!==old);packet.b=choices[Math.floor(random()*choices.length)]}
+ }
+}
+function glass(cx,cy){
+ const r=R*.805;
+ let g=ctx.createRadialGradient(cx-r*.34,cy-r*.45,r*.02,cx,cy,r);
+ g.addColorStop(0,'rgba(85,125,147,.13)');g.addColorStop(.4,'rgba(21,40,57,.28)');g.addColorStop(.78,'rgba(9,23,36,.65)');g.addColorStop(.94,'rgba(50,88,109,.16)');g.addColorStop(1,'rgba(151,214,232,.025)');
+ ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.fill();
+ g=ctx.createRadialGradient(cx,cy,r*.77,cx,cy,r*1.015);g.addColorStop(0,'rgba(100,188,220,0)');g.addColorStop(.72,`rgba(115,192,220,${.025+energy*.025})`);g.addColorStop(.92,'rgba(170,217,234,.065)');g.addColorStop(1,'rgba(130,190,219,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r*1.015,0,TAU);ctx.fill();
+ const shine=-2.2+Math.sin(time*.19)*.38+px*.3;
+ for(let i=0;i<9;i++){ctx.beginPath();ctx.arc(cx,cy,r*(.981-i*.006),shine-.40,shine+.14);ctx.strokeStyle=`rgba(187,232,249,${(.07-i*.006)*(1+hover*.65)})`;ctx.lineWidth=i===0?1:.6;ctx.stroke()}
+ ctx.beginPath();ctx.arc(cx,cy,r*.99,shine+PI-.16,shine+PI+.4);ctx.strokeStyle='rgba(147,214,232,.14)';ctx.lineWidth=.75;ctx.stroke();
+ light(cx-R*.25,cy-R*.29,R*.8,.2+energy*.14);light(cx+R*.29,cy+R*.29,R*.64,.11+energy*.11,state==='success'?mint:blue);
+ // Broad, translucent filaments in a true rotating volume.
+ ctx.save();ctx.beginPath();ctx.arc(cx,cy,r*.99,0,TAU);ctx.clip();
+ for(let k=0;k<8;k++){
+  let previous=null;const angle=k*.61+time*(.065+(k%3)*.014);
+  const count=quality<.8?60:85;
+  for(let j=0;j<count;j++){
+   const t=j/(count-1),a=t*TAU*1.04,rr=.57+.046*Math.sin(a*3+time*.22+k);
+   const q=rotate(V(Math.cos(a)*rr,Math.sin(a)*rr,(t-.5)*.25),angle,.46+Math.sin(k)*.56,time*.035+k*.2);
+   const p=project(q),fade=Math.pow(Math.sin(t*PI),1.5),alpha=fade*(.012+energy*.013)*(1+(q.z+.7)*.4);
+   if(previous){line(previous,p,`rgba(111,192,226,${alpha})`,(k%3===0?9:4)*W/600);line(previous,p,`rgba(154,217,243,${alpha*1.9})`,.7)}previous=p;
+  }
+ }
+ ctx.restore();
+}
+function orbitSegments(){
+ const result=[];
+ for(let k=0;k<2;k++){
+  const radius=1.035+k*.075,rot=time*(k?-.08:.105)+k*1.3;
+  let lastPoint=null;
+  for(let j=0;j<=140;j++){
+   const a=TAU*j/140,v=rotate(V(Math.cos(a)*radius,Math.sin(a)*radius,0),k?-.7:.3,k?.72:1.1,rot);
+   const p=project(v);if(lastPoint){const bright=Math.pow(Math.max(0,Math.cos(a-time*.35-k)),13);result.push({a:lastPoint,b:p,z:(lastPoint.z+p.z)*.5,alpha:.035+bright*(.17+energy*.19),bright})}lastPoint=p;
+  }
+ }
+ return result;
+}
+function drawOrbits(list,front){for(const seg of list){if((seg.z>=0)!==front)continue;line(seg.a,seg.b,`rgba(157,209,231,${seg.alpha*(front?1:.4)})`,seg.bright>.6?1:.6);if(seg.bright>.985&&front)light(seg.b.x,seg.b.y,13,.24+energy*.22)}}
+function drawMesh(points,front){
+ const fade=1-morph*.5;
+ for(const [ia,ib] of shell.edges){
+  const a=points[ia],b=points[ib],z=(a.z+b.z)*.5;if((z>=0)!==front)continue;
+  const proximity=hover*Math.max(0,1-Math.hypot((a.x-W*.5)/R-px*1.2,(a.y-H*.5)/R-py*1.2)/.75);
+  const band=Math.pow(Math.max(0,Math.sin((a.x+b.x)*.009+time*.53+z*2)),10)*energy;
+  const alpha=((front?.032+.12*Math.pow(z,2):.024)+proximity*.2+band*.045)*fade;
+  line(a,b,`rgba(174,213,232,${alpha})`,front?.62+Math.max(0,z)*.24:.45);
+ }
+ if(front)for(let i=0;i<points.length;i++){
+  const p=points[i];if(p.z<0)continue;const z=Math.max(0,p.z);ctx.fillStyle=`rgba(191,224,239,${(.15+z*.42+hover*.15)*fade})`;ctx.beginPath();ctx.arc(p.x,p.y,.6+z*.47,0,TAU);ctx.fill();
+  if(i%19===0)light(p.x,p.y,12,.17+energy*.13);
+ }
+}
+function drawPackets(points){
+ const count=quality<.8?16:23;
+ for(let i=0;i<count;i++){
+  const p=packets[i],a=points[p.a],b=points[p.b],head={x:mix(a.x,b.x,p.t),y:mix(a.y,b.y,p.t)},z=mix(a.z,b.z,p.t);
+  const opacity=(z<0?.10:.46+z*.34)*(.33+energy*.8+hover*.4)*(1-morph*.45);
+  const tail={x:mix(a.x,b.x,Math.max(0,p.t-.38)),y:mix(a.y,b.y,Math.max(0,p.t-.38))};
+  line(tail,head,`rgba(155,222,246,${opacity*.56})`,1.2);light(head.x,head.y,13+energy*7,opacity*.9);
+  ctx.fillStyle=`rgba(219,247,255,${opacity})`;ctx.beginPath();ctx.arc(head.x,head.y,.8+energy*.3,0,TAU);ctx.fill();
+ }
+}
+function drawParticles(){
+ const count=Math.floor(particles.length*quality),list=[];
+ for(let i=0;i<count;i++){
+  const s=particles[i],drift=reduced?0:Math.sin(time*s.speed+s.a)*.027;
+  const q=rotate(V(s.p.x+drift*.4,s.p.y+drift,s.p.z),yaw*.65+s.a*.025,-.2+py*.1,time*.018);
+  const target=glyph[Math.floor(s.target*glyph.length)];
+  if(morph>0){const curl=(1-morph)*Math.sin(morph*PI)*.4;q.x=mix(q.x,target.x,morph)+Math.sin(s.a+morph*TAU)*curl;q.y=mix(q.y,target.y,morph)+Math.cos(s.a+morph*TAU)*curl;q.z*=1-morph}
+  const p=project(q);list.push({p,s,q});
+ }
+ list.sort((a,b)=>a.q.z-b.q.z);
+ for(const {p,s,q} of list){
+  const dist=Math.hypot(q.x,q.y),textSpace=state==='idle'||state==='hover'||state==='process';
+  const fade=textSpace?clamp((dist-.19)/.29,.10,1):1;
+  const alpha=(.26+q.z*.3+s.brightness*.26)*(reduced?1:.78+.22*Math.sin(time*.75+s.a))*fade*(1+energy*.34);
+  const a=mix(alpha,.5+s.brightness*.45,morph),sz=mix(s.size*(.8+q.z*.25),.68+s.brightness*.38,morph)*W/600;
+  ctx.fillStyle=state==='success'?`rgba(174,236,220,${clamp(a)})`:`rgba(180,223,244,${clamp(a)})`;
+  ctx.beginPath();ctx.arc(p.x,p.y,Math.max(.35,sz),0,TAU);ctx.fill();
+  if(s.brightness>.91)light(p.x,p.y,(morph?6:8)*W/600,a*.38,morph?mint:blue);
+ }
+ if(morph>.7){ctx.globalAlpha=(morph-.7)/.3;for(const [x1,y1,x2,y2] of glyphPaths)line(project(V(x1,y1-.06,0)),project(V(x2,y2-.06,0)),'rgba(169,235,216,.28)',.6);ctx.globalAlpha=1}
+}
+function opening(){
+ if(aperture<.02)return;
+ let previous=null;
+ for(let i=0;i<=150;i++){
+  const a=TAU*i/150,q=rotate(V(Math.cos(a)*.87,Math.sin(a)*.10,Math.sin(a)*.87),.13,-.15,.11),p=project(q);
+  if(previous&&q.z>-.1)line(previous,p,`rgba(157,229,251,${aperture*(.12+.24*Math.max(0,q.z))})`,1.2);previous=p;
+ }
+ light(W*.5,H*.5,R*.75,aperture*.5);
+}
+function inputCard(){
+ if(state!=='absorb'||reduced)return;
+ const age=stateAge,p=clamp(age/1.2),e=ease(p),cx=W*.5+mix(-R*.75,0,e),cy=H*.5+mix(-R*.38,0,e),sz=W/600;
+ if(p<.9){ctx.save();ctx.translate(cx,cy);ctx.rotate(mix(-.16,.25,p));ctx.scale(mix(1,.28,e)*sz,mix(1,.28,e)*sz);ctx.globalAlpha=1-smooth((p-.38)/.5);ctx.fillStyle='rgba(24,48,64,.85)';ctx.strokeStyle='#afdeef';ctx.lineWidth=.85;ctx.beginPath();ctx.moveTo(-31,-40);ctx.lineTo(14,-40);ctx.lineTo(31,-23);ctx.lineTo(31,40);ctx.lineTo(-31,40);ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(14,-40);ctx.lineTo(14,-23);ctx.lineTo(31,-23);ctx.stroke();ctx.fillStyle='#e0f5ff';ctx.font='500 14px "Segoe UI",Arial,sans-serif';ctx.textAlign='center';ctx.fillText('CSV',0,4);ctx.strokeStyle='#719eb5';for(let j=0;j<3;j++){ctx.beginPath();ctx.moveTo(-17,17+j*5);ctx.lineTo(16,17+j*5);ctx.stroke()}ctx.restore()}
+ for(const f of fragments){
+  const t=clamp((age-f.delay)/1.12);if(t<=0||t>=1)continue;const v=1-ease(t),curl=Math.sin(t*PI)*.37;
+  const x=W*.5+R*((-.75+f.x)*v+Math.sin(t*5+f.phase)*curl),y=H*.5+R*((-.38+f.y)*v+Math.cos(t*5+f.phase)*curl*.65);
+  const a=Math.sin(t*PI);light(x,y,10,a*.6);ctx.fillStyle=`rgba(204,240,255,${a})`;ctx.fillRect(x,y,f.size*sz,f.size*sz);
+ }
+}
+function progressRing(){
+ if(state!=='process')return;const r=R*1.17,cx=W*.5,cy=H*.5;
+ ctx.beginPath();ctx.arc(cx,cy,r,-PI*.5,PI*1.5);ctx.strokeStyle='#6fa2b315';ctx.lineWidth=1;ctx.stroke();
+ for(let k=0;k<80;k++){const a=TAU*k/80-PI*.5;const done=k/80<progress;const a1={x:cx+Math.cos(a)*(r-3),y:cy+Math.sin(a)*(r-3)},a2={x:cx+Math.cos(a)*(r+(k%5===0?2:0)),y:cy+Math.sin(a)*(r+(k%5===0?2:0))};line(a1,a2,done?'rgba(152,216,239,.45)':'rgba(123,169,192,.10)',.6)}
+ ctx.beginPath();ctx.arc(cx,cy,r,-PI*.5,TAU*progress-PI*.5);ctx.strokeStyle='rgba(177,227,247,.75)';ctx.lineWidth=1.1;ctx.stroke();const a=TAU*progress-PI*.5;light(cx+Math.cos(a)*r,cy+Math.sin(a)*r,18,.9,white);
+}
+function render(dt){
+ if(!ctx)return;ctx.clearRect(-sceneX,-sceneY,viewW,viewH);const cx=W*.5,cy=H*.5;
+ for(const s of stars){const f=reduced?1:.8+.2*Math.sin(time*.25+s.phase);ctx.fillStyle=`rgba(158,199,222,${s.a*f})`;ctx.beginPath();ctx.arc(cx+s.x*R-px*3,cy+s.y*R-py*3,s.r,0,TAU);ctx.fill()}
+ light(cx,cy,R*2.0,.4+energy*.27,state==='success'?mint:blue);
+ light(cx-R*.5+px*R*.13,cy-R*.4+py*R*.13,R*1.25,.23+hover*.32);
+ const breath=reduced?1:1+Math.sin(time*.55)*.008;
+ const points=shell.vertices.map(v=>{
+  const q=rotate(v,yaw+px*.1,-.21+py*.13+Math.sin(time*.14)*.075,Math.sin(time*.07)*.07);
+  const proximity=hover*Math.exp(-((q.x-px*1.2)**2+(q.y-py*1.2)**2)*4)*Math.max(0,q.z);
+  const stretch=1+proximity*.065;
+  q.x*=breath*stretch;q.y=q.y*breath*stretch+Math.sign(q.y)*aperture*.075*Math.exp(-Math.abs(q.y)*4);q.z*=breath;return project(q);
+ });
+ const orbits=orbitSegments();drawOrbits(orbits,false);drawMesh(points,false);glass(cx,cy);drawParticles();opening();drawMesh(points,true);drawOrbits(orbits,true);drawPackets(points);inputCard();progressRing();
+ if(burst>0){const p=1-burst;ctx.beginPath();ctx.arc(cx,cy,R*(.75+p*.7),0,TAU);ctx.strokeStyle=`rgba(164,241,214,${Math.sin(p*PI)*.24})`;ctx.lineWidth=1.4-p;ctx.stroke();light(cx,cy,R*(1+p),burst*.25,mint)}
+ // Two discreet orbital reference marks.
+ ctx.strokeStyle='rgba(167,211,230,.2)';ctx.lineWidth=.65;for(const a of [-PI*.5,PI*.5]){ctx.beginPath();ctx.arc(cx,cy,R*1.20,a-.075,a+.075);ctx.stroke()}
+}
+function loop(now){
+ raf=0;if(document.hidden){last=0;return}
+ const elapsed=last?Math.max(0,(now-last)/1000):1/60;last=now;const dt=Math.min(elapsed,.055);
+ if(elapsed>0&&elapsed<.2){frameAverage=mix(frameAverage,elapsed*1000,.02);if(frameAverage>31&&quality>.66)quality=.66}
+ update(dt);render(dt);
+ if(!reduced||demoActive)raf=requestAnimationFrame(loop);else last=0;
+}
+function wake(){if(!raf&&!document.hidden)raf=requestAnimationFrame(loop)}
+function setMotion(value){reduced=value;document.body.classList.toggle('reduced',value);if(value){px=py=tx=ty=0;document.documentElement.style.setProperty('--mx','0px');document.documentElement.style.setProperty('--my','0px')}wake()}
+stage.addEventListener('pointermove',e=>{if(e.pointerType==='touch'||reduced)return;const r=stage.getBoundingClientRect();tx=clamp((e.clientX-r.left-r.width/2)/(r.width*.5),-1,1);ty=clamp((e.clientY-r.top-r.height/2)/(r.height*.5),-1,1);document.documentElement.style.setProperty('--mx',`${tx*10}px`);document.documentElement.style.setProperty('--my',`${ty*10}px`);wake()});
+stage.addEventListener('pointerleave',()=>{tx=ty=0;if(state==='hover'&&!hoverLock&&!dragDepth)setUIState('idle')});
+hit.addEventListener('pointerenter',()=>{if(state==='idle')setUIState('hover')});
+hit.addEventListener('pointerleave',()=>{if(state==='hover'&&!hoverLock&&!dragDepth)setUIState('idle')});
+hit.addEventListener('focus',()=>{if(state==='idle')setUIState('hover')});
+hit.addEventListener('blur',()=>{if(state==='hover'&&!hoverLock&&!dragDepth)setUIState('idle')});
+hit.addEventListener('click',()=>{if(!demoActive)input.click()});
+input.addEventListener('change',()=>{if(input.files&&input.files.length)acceptFiles(input.files);input.value=''});
+const isFileDrag=e=>e.dataTransfer&&Array.from(e.dataTransfer.types||[]).includes('Files');
+window.addEventListener('dragover',e=>{if(isFileDrag(e))e.preventDefault()});
+window.addEventListener('drop',e=>{if(isFileDrag(e))e.preventDefault();dragDepth=0;if(state==='hover'&&!hoverLock)setUIState('idle')});
+stage.addEventListener('dragenter',e=>{if(!isFileDrag(e)||demoActive)return;e.preventDefault();dragDepth++;setUIState('hover')});
+stage.addEventListener('dragover',e=>{if(!isFileDrag(e))return;e.preventDefault();e.dataTransfer.dropEffect=demoActive?'none':'copy'});
+stage.addEventListener('dragleave',e=>{if(!isFileDrag(e))return;dragDepth=Math.max(0,dragDepth-1);if(!dragDepth&&state==='hover'&&!hoverLock)setUIState('idle')});
+stage.addEventListener('drop',e=>{if(!isFileDrag(e))return;e.preventDefault();e.stopPropagation();dragDepth=0;acceptFiles(e.dataTransfer.files)});
+media.addEventListener('change',e=>setMotion(e.matches));
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;last=0}else wake()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){tx=ty=0;reset()}});
+if('ResizeObserver' in window)new ResizeObserver(resize).observe(stage);
+window.addEventListener('resize',resize);
+if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);
+if(!ctx){statusText.textContent='Цей браузер не підтримує Canvas';hit.disabled=true;return}
+setMotion(reduced);resize();wake();
+})();
+</script>
 <script type="module">
 import JSZip from 'https://esm.sh/jszip@3.10.1';
 import * as mgrs from 'https://esm.sh/mgrs@2.1.0';
-
-const fileInput=document.getElementById('file'),drop=document.getElementById('drop'),status=document.getElementById('status');
-let reportText='';let reportFile='report.txt';let busy=false;
-const progressFill=document.getElementById('progressFill'),progressPercent=document.getElementById('progressPercent'),progressStatus=document.getElementById('progressStatus'),progressTrack=document.getElementById('progressTrack');
-function setProgress(p,label){p=Math.max(0,Math.min(100,Math.round(p)));progressFill.style.width=p+'%';progressPercent.textContent=p+'%';progressTrack.setAttribute('aria-valuenow',String(p));progressStatus.textContent=label;}
-function frame(){return new Promise(resolve=>requestAnimationFrame(()=>resolve()))}
+// Existing conversion engine remains unchanged. Only UI wiring is replaced.
+let busy=false,reportText='',reportFile='report.txt';
 const reportBtn=document.getElementById('report');
-function reportLine(message){reportText+='\n'+message}
+const reportLine=message=>{reportText+='\n'+message};
+const setProgress=(p,label)=>window.geoVisual?.progress(p,label);
 const setStatus=(message,kind='')=>{
-  status.textContent=message;
-  status.className=kind;
-  drop.classList.remove('processing','completed','failed');
-  if(kind==='success')drop.classList.add('completed');
-  else if(kind==='error')drop.classList.add('failed');
-  else if(message)drop.classList.add('processing');
+ if(kind==='success')window.geoVisual?.success();
+ else if(kind==='error')window.geoVisual?.error(message);
 };
+const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>resolve()));
 reportBtn.addEventListener('click',()=>{
-  if(!reportText)return;
-  const blob=new Blob(['\uFEFF'+reportText],{type:'text/plain;charset=utf-8'});
-  const url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download=reportFile;document.body.append(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),10000);
+ if(!reportText)return;
+ const blob=new Blob(['\uFEFF'+reportText],{type:'text/plain;charset=utf-8'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=reportFile;document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),10000);
 });
-document.getElementById('choose').addEventListener('click',e=>{e.stopPropagation();fileInput.click()});
-drop.addEventListener('click',()=>{if(!busy)fileInput.click()});
-drop.addEventListener('keydown',e=>{if(!busy&&(e.key==='Enter'||e.key===' ')){e.preventDefault();fileInput.click()}});
-for(const ev of ['dragenter','dragover'])drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')});
-for(const ev of ['dragleave','drop'])drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')});
-drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f&&!busy)processFile(f)});
-fileInput.addEventListener('change',()=>{if(fileInput.files[0]&&!busy)processFile(fileInput.files[0]);fileInput.value=''});
-
 function parseCSV(text){
   text=text.replace(/^\uFEFF/,'');
   let sample='',quoted=false;
@@ -122,7 +434,6 @@ function parseMgrs(str){
 async function processFile(file){
   if(busy)return;
   busy=true;
-  drop.classList.add('is-busy');
   setProgress(0,'Початок…');
   await frame();
   reportText='GEO CONVERTER — CSV REPORT\nФайл: '+file.name+'\nРозмір: '+file.size+' байтів';
@@ -216,6 +527,15 @@ async function processFile(file){
     setProgress(0,'Помилка конвертації');
     setStatus('Не вдалося створити KMZ. Деталі — у TXT-звіті.','error');
     console.error(e);
-  }finally{reportBtn.disabled=false;busy=false;drop.classList.remove('is-busy')}
+  }finally{reportBtn.disabled=false;busy=false}
 }
-</script></body></html>
+window.addEventListener('geo:input',()=>{
+ const file=window.geoPendingFile;window.geoPendingFile=null;
+ if(file&&!busy)processFile(file);
+});
+if(window.geoPendingFile){
+ const pending=window.geoPendingFile;window.geoPendingFile=null;processFile(pending);
+}
+</script>
+</body>
+</html>
