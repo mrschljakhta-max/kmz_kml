@@ -22,7 +22,7 @@ footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-item
 <div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">UTF-8 · роздільники ; , або табуляція</span><button id="choose" type="button">Обрати CSV</button></div>
 <input id="file" type="file" accept=".csv,text/csv"></section>
 <section class="panel"><h2>Результат</h2><p id="status" aria-live="polite">Очікую CSV. Підтримуються колонка MGRS або колонки широти й довготи WGS84. Усі початкові поля зберігаються в атрибутах KMZ.</p></section>
-<footer>GEO CONVERTER · v1.2 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
+<footer>GEO CONVERTER · v1.2.1 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
 <script type="module">
 import * as mgrs from 'https://esm.sh/mgrs@2.2.0';
 import JSZip from 'https://esm.sh/jszip@3.10.1';
@@ -51,7 +51,7 @@ function parseCSV(text){
  const headers=rows.shift().map((x,i)=>x.trim()||'column_'+(i+1));
  return {headers,records:rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,(r[i]||'').trim()])))};
 }
-const normalize=s=>s.toLowerCase().replace(/[\s_\-().]/g,'');
+const normalize=s=>String(s).normalize('NFKC').toLowerCase().replace(/[\uFEFF\u200B\s_\-().]/g,'');
 function column(headers,variants){return headers.find(h=>variants.includes(normalize(h)))}
 function num(s){let v=Number(String(s).trim().replace(',','.'));return s!==''&&Number.isFinite(v)?v:NaN}
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
@@ -64,7 +64,15 @@ async function processFile(file){
  const mc=column(headers,['mgrs','mgrscoordinate','mgrscoordinates','координатимгрс','мгрс','gridreference','grid']);
  const latc=column(headers,['lat','latitude','широта','y','wgs84lat','wgs84latitude']);
  const lonc=column(headers,['lon','lng','long','longitude','довгота','x','wgs84lon','wgs84longitude']);
- if(!mc&&!(latc&&lonc))throw Error('Не знайдено колонку MGRS або пару колонок latitude/longitude (широта/довгота).');
+ if(!mc&&!(latc&&lonc)){
+   const found=headers.map((h,i)=>(i+1)+'. '+h).join(' | ');
+   const detail='CSV прочитано: '+records.length+' записів, '+headers.length+' колонок.\\n'
+      +'Розпізнані координатні поля: MGRS — '+(mc||'не знайдено')
+      +'; широта — '+(latc||'не знайдено')
+      +'; довгота — '+(lonc||'не знайдено')+'.\\n'
+      +'Назви колонок у файлі: '+found+'.';
+   throw Error('Не знайдено підтримувану колонку MGRS або пару широта/довгота WGS84.\\n'+detail);
+ }
  const namec=column(headers,['name','title','назва','найменування','object','обєкт','id']);
  let placemarks=[],errors=[];
  records.forEach((record,i)=>{
