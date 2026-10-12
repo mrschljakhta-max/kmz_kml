@@ -29,6 +29,10 @@ main{position:relative;z-index:1;min-height:100svh;display:flex;flex-direction:c
 @media(prefers-reduced-motion:reduce){.hero,.stage{animation:none}}
 
 .report-button{font:11px "SFMono-Regular",Consolas,monospace;color:#b5cbd9;background:#12222d8c;border:1px solid #89b9ce50;border-radius:10px;padding:10px 14px;transition:background .2s}
+.header-tools{display:flex;align-items:center;gap:9px}
+.restart-button{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;color:#b5cbd9;background:#12222d8c;border:1px solid #89b9ce50;border-radius:10px;transition:background .2s,border-color .2s}
+.restart-button:hover{background:#20394a;border-color:#a5d6e5}
+.restart-button:focus-visible{outline:2px solid #b2e7ff;outline-offset:3px}
 .report-button:hover:not(:disabled){background:#20394a}
 .report-button:disabled{opacity:.32;cursor:not-allowed}
 .stage[data-state=error] .portal-copy strong{color:#efb59e}
@@ -70,7 +74,12 @@ main{z-index:2}
 <canvas id="scene" class="scene" aria-hidden="true"></canvas>
 <div class="atmosphere" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div>
 <svg class="contours" viewBox="0 0 1440 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#61899c" stroke-width=".65"><path d="M-80 180C160 60 315 268 160 389S-20 542 44 704 329 721 350 994M-70 211C150 110 270 274 143 388S-40 554 20 713 279 757 300 1010M-60 242C126 153 223 282 126 387S-65 566-4 722 229 784 250 1026M-50 273C98 194 178 290 109 386S-83 575-29 731 179 812 200 1042M-40 304C74 236 135 295 92 385S-106 587-54 740 129 840 150 1058M-30 335C46 277 92 305 75 384S-125 595-79 749 79 868 100 1074"/><path d="M1100-40C968 140 1230 214 1350 316S1258 584 1430 677M1135-35C1014 137 1260 197 1380 305S1298 578 1465 650M1170-30C1060 134 1290 180 1410 294S1338 572 1500 623M1205-25C1106 131 1320 163 1440 283S1378 566 1535 596M1240-20C1152 128 1350 146 1470 272S1418 560 1570 569M1275-15C1198 125 1380 129 1500 261S1458 554 1605 542"/></g></svg>
-<header class="topbar"><div class="brand"><svg viewBox="0 0 30 30" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="10" stroke="currentColor" stroke-width=".8"/><ellipse cx="15" cy="15" rx="5" ry="12" transform="rotate(48 15 15)" stroke="currentColor" stroke-width=".8"/><circle cx="23" cy="8" r="2" fill="#c4e8f2"/></svg>GEO <small>/ converter</small></div><button id="report" class="report-button" type="button" disabled title="Завантажити TXT-звіт">TXT-звіт ↓</button></header>
+<header class="topbar"><div class="brand"><svg viewBox="0 0 30 30" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="10" stroke="currentColor" stroke-width=".8"/><ellipse cx="15" cy="15" rx="5" ry="12" transform="rotate(48 15 15)" stroke="currentColor" stroke-width=".8"/><circle cx="23" cy="8" r="2" fill="#c4e8f2"/></svg>GEO <small>/ converter</small></div><div class="header-tools">
+<button id="restart" class="restart-button" type="button" title="Перезапустити конвертер" aria-label="Перезапустити конвертер">
+<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.65 6.35"/><path d="M3 4v7h7"/></svg>
+</button>
+<button id="report" class="report-button" type="button" disabled title="Завантажити TXT-звіт">TXT-звіт ↓</button>
+</div></header>
 <main aria-label="Конвертер CSV у KMZ">
  <section class="stage" id="stage" data-state="idle" aria-label="Цифрове ядро — завантаження CSV">
   <button type="button" class="portal-hit" id="dropzone" aria-label="Обрати CSV для конвертації"></button>
@@ -409,6 +418,8 @@ import JSZip from 'https://esm.sh/jszip@3.10.1';
 import * as mgrs from 'https://esm.sh/mgrs@2.1.0';
 // Existing conversion engine remains unchanged. Only UI wiring is replaced.
 let busy=false,reportText='',reportFile='report.txt';
+// A fresh page load clears the previous file, report and all visual states.
+document.getElementById('restart').addEventListener('click',()=>window.location.reload());
 const reportBtn=document.getElementById('report');
 const reportLine=message=>{reportText+='\n'+message};
 const setProgress=(p,label)=>window.geoVisual?.progress(p,label);
