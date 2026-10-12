@@ -16,15 +16,14 @@ footer{font-size:12px;margin-top:38px;color:#7790b0}.row{display:flex;align-item
  #report{background:transparent;color:#aac6e7;border:1px solid #365474;padding:9px 13px;font-size:12px}#report:disabled{opacity:.4;cursor:not-allowed}#status{font-size:14px;max-width:70%;margin:0} .panel{padding:22px} </style></head><body><main>
 <div class="eyebrow">◈ GEO CONVERTER</div>
 <h1>CSV → KMZ.<br>Без зайвих кроків.</h1>
-<p>Завантаж CSV — сайт автоматично створить KMZ, якщо формат координат підтримується. Обробка відбувається локально в браузері.</p>
+<p>Завантаж CSV із широтою та довготою WGS84 — сайт автоматично створить KMZ. Обробка відбувається локально в браузері.</p>
 <section class="panel"><div class="drop" id="drop" tabindex="0" role="button" aria-label="Обрати CSV"><div class="symbol">⇧</div><strong>Перетягни CSV сюди</strong><span class="muted">CSV · UTF-8 · до 20 МБ</span><button id="choose" type="button">Обрати CSV</button></div><input id="file" type="file" accept=".csv,text/csv"></section>
 <div class="row" style="justify-content:space-between;margin-top:18px">
  <p id="status" aria-live="polite">Очікування CSV</p>
  <button id="report" type="button" disabled title="Завантажити короткий TXT-звіт">▤ TXT-звіт</button>
 </div>
-<footer>GEO CONVERTER · v1.4 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
+<footer>GEO CONVERTER · v2.0 · Локальна обробка · Не завантажуйте секретні або оперативні військові дані в публічні вебсервіси.</footer></main>
 <script type="module">
-import * as mgrs from 'https://esm.sh/mgrs@2.2.0';
 import JSZip from 'https://esm.sh/jszip@3.10.1';
 const fileInput=document.getElementById('file'),drop=document.getElementById('drop'),status=document.getElementById('status');
 let reportText='';let reportFile='report.txt';
@@ -46,20 +45,29 @@ for(const ev of ['dragleave','drop'])drop.addEventListener(ev,e=>{e.preventDefau
 drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)processFile(f)});
 fileInput.addEventListener('change',()=>{if(fileInput.files[0])processFile(fileInput.files[0]);fileInput.value=''});
 function parseCSV(text){
- text=text.replace(/^\uFEFF/,'');const first=text.split(/\r?\n/).find(x=>x.trim())||'';
- const counts=[';',',','\t'].map(sep=>{let quote=false,n=0;for(const c of first){if(c==='"')quote=!quote;else if(!quote&&c===sep)n++}return n});
- const sep=[';',',','\t'][counts.indexOf(Math.max(...counts))];
- let rows=[],row=[],field='',quoted=false;
+ text=text.replace(/^\uFEFF/,'');
+ // Detect delimiter in the first logical CSV record, respecting quoted newlines.
+ let sample='',quoted=false;
+ for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){i++;continue}quoted=!quoted}
+ if(!quoted&&(c==='\n'||c==='\r'))break;sample+=c}
+ const separators=[';',',','\t'];
+ const counts=separators.map(sep=>{let q=false,n=0;for(let i=0;i<sample.length;i++){let c=sample[i];if(c==='"'){if(q&&sample[i+1]==='"'){i++;continue}q=!q}else if(!q&&c===sep)n++}return n});
+ if(Math.max(...counts)===0)throw Error('Не вдалося визначити роздільник CSV');
+ const sep=separators[counts.indexOf(Math.max(...counts))];
+ let rows=[],row=[],field='',q=false;
  for(let i=0;i<text.length;i++){const c=text[i];
- if(c==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++}else quoted=!quoted}
- else if(c===sep&&!quoted){row.push(field);field=''}
- else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(x=>x.trim()))rows.push(row);row=[];field=''}
+ if(c==='"'){if(q&&text[i+1]==='"'){field+='"';i++}else if(q){q=false}else if(!field.trim()){q=true}else{field+=c}}
+ else if(c===sep&&!q){row.push(field);field=''}
+ else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(x=>x.trim()))rows.push(row);row=[];field=''}
  else field+=c}
- if(quoted)throw Error('Незакриті лапки у CSV');
+ if(q)throw Error('Незакриті лапки у CSV');
  row.push(field);if(row.some(x=>x.trim()))rows.push(row);
  if(rows.length<2)throw Error('CSV має містити заголовки та хоча б один рядок');
  const headers=rows.shift().map((x,i)=>x.trim()||'column_'+(i+1));
- return {headers,records:rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,(r[i]||'').trim()])))};
+ if(new Set(headers.map(h=>normalize(h))).size!==headers.length)throw Error('CSV має дубльовані заголовки колонок');
+ const bad=rows.findIndex(r=>r.length!==headers.length);
+ if(bad>=0)throw Error('Рядок '+(bad+2)+': кількість полів '+rows[bad].length+' замість '+headers.length);
+ return {headers,records:rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i].trim()]))),sep};
 }
 const normalize=s=>String(s).normalize('NFKC').toLowerCase().replace(/[\uFEFF\u200B\s_\-().]/g,'');
 function column(headers,variants){return headers.find(h=>variants.includes(normalize(h)))}
@@ -73,37 +81,29 @@ async function processFile(file){
  if(file.size>20*1024*1024)throw Error('Файл перевищує обмеження 20 МБ');
  if(!/\.csv$/i.test(file.name))throw Error('Оберіть файл .csv');
  setStatus('Обробка CSV…');
- const {headers,records}=parseCSV(await file.text());
- reportLine('Записів: '+records.length);reportLine('Колонок: '+headers.length);reportLine('Імпорт: успішно');
- const mc=column(headers,['mgrs','mgrscoordinate','mgrscoordinates','координатимгрс','мгрс','gridreference','grid']);
- const latc=column(headers,['lat','latitude','широта','y','wgs84lat','wgs84latitude']);
- const lonc=column(headers,['lon','lng','long','longitude','довгота','x','wgs84lon','wgs84longitude']);
- if(!mc&&!(latc&&lonc)){
-   const found=headers.map((h,i)=>(i+1)+'. '+h).join(' | ');
-   const detail='CSV прочитано: '+records.length+' записів, '+headers.length+' колонок.\\n'
-      +'Розпізнані координатні поля: MGRS — '+(mc||'не знайдено')
-      +'; широта — '+(latc||'не знайдено')
-      +'; довгота — '+(lonc||'не знайдено')+'.\\n'
-      +'Назви колонок у файлі: '+found+'.';
-   throw Error('Не знайдено підтримувану колонку MGRS або пару широта/довгота WGS84.\\n'+detail);
+ const {headers,records,sep}=parseCSV(await file.text());
+ reportLine('Записів: '+records.length);reportLine('Колонок: '+headers.length);reportLine('Імпорт: успішно');reportLine('Роздільник: '+(sep==='\t'?'табуляція':sep));
+ const latc=column(headers,['lat','latitude','широта','wgs84lat','wgs84latitude','gpslatitude']);
+ const lonc=column(headers,['lon','lng','long','longitude','довгота','wgs84lon','wgs84longitude','gpslongitude']);
+ if(!(latc&&lonc)){
+   reportLine('Розпізнана широта: '+(latc||'немає'));
+   reportLine('Розпізнана довгота: '+(lonc||'немає'));
+   reportLine('Заголовки: '+headers.join(' | '));
+   throw Error('Не знайдено пару колонок широти й довготи WGS84 (latitude/longitude або широта/довгота).');
  }
- reportLine('Координати: '+(mc?'MGRS':latc+' / '+lonc));
+ reportLine('Координати: '+latc+' / '+lonc);
  const namec=column(headers,['name','title','назва','найменування','object','обєкт','id']);
  let placemarks=[],errors=[];
  records.forEach((record,i)=>{
  try{
- let lon,lat;
- if(mc&&record[mc]){let m=record[mc].toUpperCase().replace(/\s+/g,'');if(!/^\d{1,2}[C-HJ-NP-X][A-HJ-NP-Z]{2}(?:\d{2}){0,5}$/.test(m))throw Error('некоректний формат MGRS');
- [lon,lat]=mgrs.toPoint(m)}
- else if(latc&&lonc){lat=num(record[latc]);lon=num(record[lonc])}
- else throw Error('немає координат');
+ const lat=num(record[latc]),lon=num(record[lonc]);
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat >90||lon < -180||lon>180)throw Error('координати поза межами WGS84');
- const name=record[namec]||'Точка '+(i+1);
+ const name=(namec&&record[namec])||'Точка '+(i+1);
  const attrs=Object.entries(record).map(([k,v])=>'<Data name="'+esc(k)+'"><value>'+esc(v)+'</value></Data>').join('');
  placemarks.push('<Placemark><name>'+esc(name)+'</name><ExtendedData>'+attrs+'<Data name="WGS84_lat"><value>'+lat.toFixed(8)+'</value></Data><Data name="WGS84_lon"><value>'+lon.toFixed(8)+'</value></Data></ExtendedData><Point><coordinates>'+lon.toFixed(8)+','+lat.toFixed(8)+',0</coordinates></Point></Placemark>');
  }catch(e){errors.push('Рядок '+(i+2)+': '+e.message)}
  });
- reportLine('Помилкових рядків: '+errors.length);
+ reportLine('Помилкових рядків: '+errors.length);if(errors.length)reportLine('Деталі помилок:\n'+errors.slice(0,100).join('\n')+(errors.length>100?'\n…':''));
  if(errors.length)throw Error('Конвертацію зупинено: '+errors.length+' помилкових рядків.\n'+errors.slice(0,12).join('\n')+(errors.length>12?'\n…':''));
  if(!placemarks.length)throw Error('Немає точок для конвертації');
  const xml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+esc(file.name)+'</name>'+placemarks.join('')+'</Document></kml>';
